@@ -1,0 +1,143 @@
+############################
+# OS (macOS / Windows / Linux)
+############################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+############################
+# Éditeurs / IDE
+############################
+
+# VS Code
+.vscode/
+
+# JetBrains (PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+
+# Vim / NeoVim
+*.swp
+*.swo
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+############################
+# Python
+############################
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnements virtuels
+venv/
+.venv/
+env/
+ENV/
+.env/
+.envrc
+
+# Distribution / build
+build/
+dist/
+eggs/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Tests / Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.pyre/
+ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+############################
+# Node / Front
+############################
+
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnp.*
+.pnp.js
+
+# Bundlers
+.cache/
+.parcel-cache/
+.next/
+out/
+.nuxt/
+.svelte-kit/
+
+############################
+# Logs / Temp
+############################
+
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+############################
+# Bases de données / SQL
+############################
+
+# Fichiers DB locaux
+*.sqlite
+*.sqlite3
+*.db
+*.db3
+
+# Dumps / exports (souvent générés)
+*.sql
+*.bak
+*.backup
+
+############################
+# Docker / Conteneurs
+############################
+
+# Volumes / données locales
+docker-data/
+.docker/
+
+############################
+# Config / secrets (à adapter)
+############################
+
+# Variables d'environnement
+.env
+.env.*
+*.env
+
+# Fichiers de secrets génériques
+secrets.*
+*secrets*.json
+credentials*.json
+config.local.*
