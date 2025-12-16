@@ -4,8 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+psycopg = "*"
+python-dotenv = "*"
 
 [dev-packages]
+black = "*"
+isort = "*"
+flake8 = "*"
+pre-commit = "*"
+pytest = "*"
+psycopg = {extras = ["binary"], version = "*"}
 
 [requires]
 python_version = "3.13"

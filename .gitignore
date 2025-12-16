@@ -133,7 +133,6 @@ docker-data/
 
 # Variables d'environnement
 .env
-.env.*
 *.env
 
 # Fichiers de secrets génériques
