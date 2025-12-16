@@ -133,7 +133,6 @@ docker-data/
 
 # Variables d'environnement
 .env
-.env.*
 *.env
 
 # Fichiers de secrets génériques
@@ -141,3 +140,9 @@ secrets.*
 *secrets*.json
 credentials*.json
 config.local.*
+
+############################
+# Perso
+############################
+
+cours/
