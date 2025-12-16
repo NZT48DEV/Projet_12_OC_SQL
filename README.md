@@ -1,10 +1,13 @@
 # Epic Events CRM (Back-end Python + PostgreSQL)
 
+![CI](https://github.com/NZT48DEV/Projet_12_OC_SQL/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-blue?logo=postgresql)
+
 CRM interne sécurisé pour gérer les clients, contrats et événements d’Epic Events.
 
-Ce projet vise à mettre en place une architecture back-end sécurisée reposant sur
-Python et PostgreSQL, avec une attention particulière portée à la modélisation des
-données, à la gestion des accès et aux bonnes pratiques de sécurité.
+Ce projet met en place une architecture back-end sécurisée avec Python et PostgreSQL,
+en appliquant les bonnes pratiques de modélisation, de sécurité et de qualité logicielle.
 
 ---
 
@@ -18,81 +21,45 @@ données, à la gestion des accès et aux bonnes pratiques de sécurité.
 
 ---
 
-## Installation du projet
+## Installation rapide
 
-### 1️⃣ Cloner le repository
 ```bash
-git clone <url_du_repo>
-cd epic-events-crm
-```
-
-### 2️⃣ Installer les dépendances Python
-```bash
+git clone https://github.com/NZT48DEV/Projet_12_OC_SQL.git
+cd Projet_12_OC_SQL
 pipenv install --dev
 pipenv shell
 ```
 
 ---
 
-## Installation et configuration de PostgreSQL
+## Configuration PostgreSQL (résumé)
 
-### 1️⃣ Installer PostgreSQL
-Télécharger et installer PostgreSQL depuis le site officiel :
-https://www.postgresql.org/download/
+- Créer un utilisateur **non privilégié** : `epic_crm_app`
+- Créer une base : `epic_crm`
+- Assigner la base à `epic_crm_app`
 
-Pendant l’installation :
-- conserver le port par défaut `5432`
-- définir un mot de passe pour l’utilisateur administrateur `postgres`
-- installer pgAdmin si proposé
-
----
-
-### 2️⃣ Créer l’utilisateur applicatif (sécurité)
-
-Dans **pgAdmin** :
-- Créer un rôle :
-  - Nom : `epic_crm_app`
-  - Peut se connecter : ✅
-  - Superuser : ❌
-  - Création de bases : ❌
-  - Création de rôles : ❌
-
-Ce compte sera utilisé exclusivement par l’application
-(**principe du moindre privilège**).
-
----
-
-### 3️⃣ Créer la base de données
-- Nom : `epic_crm`
-- Propriétaire : `epic_crm_app`
+> Principe du moindre privilège appliqué : l’application n’utilise jamais le compte administrateur.
 
 ---
 
 ## Variables d’environnement
 
-### 1️⃣ Créer le fichier `.env`
-À la racine du projet, créer un fichier `.env` (non versionné) :
+Créer un fichier `.env` à la racine :
 
 ```env
 DATABASE_URL=postgresql://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
+SQLALCHEMY_DATABASE_URL=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
 SENTRY_DSN=
 ```
 
-⚠️ Si le mot de passe contient des caractères spéciaux (`@`, `:`, `/`, `%`, `#`),
-il doit être encodé (URL encoding).
+> ⚠️ Les caractères spéciaux dans le mot de passe doivent être encodés (URL encoding).
+
+Un fichier `.env.example` est fourni comme modèle.
 
 ---
 
-### 2️⃣ Fichier modèle
-Le fichier `.env.example` fournit un modèle sans informations sensibles.
+## Vérification rapide
 
----
-
-## Vérification de la connexion à la base
-
-Un test minimal est disponible dans `app/main.py` pour vérifier la connexion à PostgreSQL.
-
-Lancer :
 ```bash
 python -m app.main
 ```
@@ -106,28 +73,71 @@ Connected to database 'epic_crm' as user 'epic_crm_app'
 
 ## Qualité de code
 
-Ce projet utilise les outils suivants :
-- **black** : formatage du code
-- **isort** : organisation des imports
-- **flake8** : linting
-- **pre-commit** : hooks automatiques
-- **pytest** : tests
+Outils utilisés :
+- black
+- isort
+- flake8
+- pre-commit
+- pytest
 
-### Installer les hooks pre-commit
+Installation des hooks :
 ```bash
 pre-commit install
 ```
 
-### Lancer tous les checks
-```bash
-pre-commit run --all-files
+---
+
+## Intégration Continue (CI)
+
+Une **CI GitHub Actions** est configurée.
+
+À chaque push ou pull request vers `master` :
+- contrôle qualité (pre-commit),
+- exécution des tests pytest,
+- démarrage d’un service PostgreSQL pour les tests.
+
+---
+
+## Architecture du projet
+
+```
+.
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # CI GitHub Actions (lint + tests + postgres)
+├── app/
+│   ├── __init__.py
+│   ├── main.py                    # point d’entrée (smoke test / lancement)
+│   ├── core/                      # configuration, sécurité, logging
+│   ├── db/                        # connexion DB + base ORM
+│   ├── models/                    # modèles ORM (Employee, Client, Contract, Event)
+│   ├── repositories/              # accès aux données (DAL)
+│   ├── services/                  # logique métier (auth, règles, permissions)
+│   └── cli/                       # interface en ligne de commande
+├── db/
+│   └── 01_schema.sql              # schéma SQL (à implémenter à partir de l'ERD)
+├── docs/
+│   ├── erd.mmd                    # schéma ERD
+│   └── schema_notes.md            # notes de conception
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── functional/
+├── .env.example                   # modèle (sans secrets)
+├── .flake8                        # config flake8
+├── .gitignore
+├── .pre-commit-config.yaml        # config pre-commit
+├── Pipfile
+├── Pipfile.lock
+├── pyproject.toml                 # config black/isort
+└── README.md
 ```
 
 ---
 
 ## Documentation
 
-- Schéma de la base de données (ERD) : `docs/erd.mmd`
+- ERD : `docs/erd.mmd`
 - Notes de conception : `docs/schema_notes.md`
 
 ---
@@ -135,8 +145,7 @@ pre-commit run --all-files
 ## État du projet
 
 - ✔️ Phase d’initialisation terminée
-- ✔️ Environnement prêt
-- ✔️ PostgreSQL configuré avec un utilisateur non privilégié
-- ✔️ Connexion Python <> PostgreSQL validée
+- ✔️ Environnement et CI en place
+- ✔️ Connexion PostgreSQL validée
 
-👉 Prochaine étape : **création du schéma SQL à partir de l’ERD**.
+👉 Prochaine étape : **implémentation du schéma SQL à partir de l’ERD**.

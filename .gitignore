@@ -140,3 +140,9 @@ secrets.*
 *secrets*.json
 credentials*.json
 config.local.*
+
+############################
+# Perso
+############################
+
+cours/
