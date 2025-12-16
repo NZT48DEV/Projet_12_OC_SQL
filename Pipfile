@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 psycopg = "*"
+sqlalchemy = "*"
+psycopg2-binary = "*"
 python-dotenv = "*"
 
 [dev-packages]
@@ -12,8 +14,8 @@ black = "*"
 isort = "*"
 flake8 = "*"
 pre-commit = "*"
-pytest = "*"
 psycopg = {extras = ["binary"], version = "*"}
+pytest = "*"
 
 [requires]
 python_version = "3.11"
