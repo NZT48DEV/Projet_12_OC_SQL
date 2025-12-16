@@ -8,6 +8,7 @@ psycopg = "*"
 sqlalchemy = "*"
 psycopg2-binary = "*"
 python-dotenv = "*"
+alembic = "*"
 
 [dev-packages]
 black = "*"

@@ -1,13 +1,18 @@
-# Epic Events CRM (Back-end Python + PostgreSQL)
+# Epic Events CRM
+**Back-end Python • PostgreSQL • SQLAlchemy • Alembic**
 
 ![CI](https://github.com/NZT48DEV/Projet_12_OC_SQL/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-blue?logo=postgresql)
 
-CRM interne sécurisé pour gérer les clients, contrats et événements d’Epic Events.
+CRM interne sécurisé pour gérer les **clients**, **contrats** et **événements** d’Epic Events.
 
-Ce projet met en place une architecture back-end sécurisée avec Python et PostgreSQL,
-en appliquant les bonnes pratiques de modélisation, de sécurité et de qualité logicielle.
+Ce projet met en place une **architecture back-end robuste** avec Python et PostgreSQL, en appliquant :
+- une modélisation relationnelle (ERD),
+- le principe du moindre privilège,
+- un ORM (SQLAlchemy),
+- des migrations versionnées (Alembic),
+- et de bonnes pratiques de qualité logicielle.
 
 ---
 
@@ -16,12 +21,12 @@ en appliquant les bonnes pratiques de modélisation, de sécurité et de qualit�
 - Python **3.11+**
 - Pipenv
 - PostgreSQL **14+**
-- (Optionnel mais recommandé) pgAdmin 4
+- (Recommandé) pgAdmin 4
 - Git
 
 ---
 
-## Installation rapide
+## Installation
 
 ```bash
 git clone https://github.com/NZT48DEV/Projet_12_OC_SQL.git
@@ -32,36 +37,67 @@ pipenv shell
 
 ---
 
-## Configuration PostgreSQL (résumé)
+## Configuration PostgreSQL
 
-- Créer un utilisateur **non privilégié** : `epic_crm_app`
-- Créer une base : `epic_crm`
-- Assigner la base à `epic_crm_app`
+Le projet utilise un **compte non privilégié** pour l’application.
 
-> Principe du moindre privilège appliqué : l’application n’utilise jamais le compte administrateur.
+À créer côté PostgreSQL :
+- Utilisateur : `epic_crm_app`
+- Base de données : `epic_crm`
+- Propriétaire / droits : `epic_crm_app`
+
+> 🔐 Principe du moindre privilège :
+> l’application n’utilise **jamais** le compte administrateur `postgres`.
 
 ---
 
 ## Variables d’environnement
 
-Créer un fichier `.env` à la racine :
+Créer un fichier `.env` à la racine du projet :
 
 ```env
-DATABASE_URL=postgresql://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
-SQLALCHEMY_DATABASE_URL=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
+DATABASE_URL=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
 SENTRY_DSN=
 ```
 
-> ⚠️ Les caractères spéciaux dans le mot de passe doivent être encodés (URL encoding).
+⚠️ Les caractères spéciaux dans le mot de passe doivent être **encodés** (URL encoding).
 
-Un fichier `.env.example` est fourni comme modèle.
+Un fichier `.env.example` est fourni.
+
+---
+
+## Base de données & migrations
+
+Le schéma est géré via **SQLAlchemy + Alembic**.
+
+### Modèles ORM implémentés
+- `Employee`
+- `Client`
+- `Contract`
+- `Event`
+
+### Relations principales
+- `Client.sales_contact_id -> Employee.id`
+- `Contract.client_id -> Client.id`
+- `Contract.sales_contact_id -> Employee.id`
+- `Event.contract_id -> Contract.id`
+- `Event.client_id -> Client.id`
+- `Event.support_contact_id -> Employee.id` (nullable)
+
+Les timestamps sont stockés en **UTC**.
+
+### Commandes Alembic
+```bash
+pipenv run alembic revision --autogenerate -m "description"
+pipenv run alembic upgrade head
+```
 
 ---
 
 ## Vérification rapide
 
 ```bash
-python -m app.main
+pipenv run python -m app.main
 ```
 
 Résultat attendu :
@@ -91,10 +127,10 @@ pre-commit install
 
 Une **CI GitHub Actions** est configurée.
 
-À chaque push ou pull request vers `master` :
-- contrôle qualité (pre-commit),
-- exécution des tests pytest,
-- démarrage d’un service PostgreSQL pour les tests.
+À chaque push ou pull request :
+- vérification du style (pre-commit),
+- exécution des tests,
+- démarrage d’un service PostgreSQL pour les tests d’intégration.
 
 ---
 
@@ -119,6 +155,8 @@ Une **CI GitHub Actions** est configurée.
 ├── docs/
 │   ├── erd.mmd                    # schéma ERD
 │   └── schema_notes.md            # notes de conception
+├── migrations/
+│   └── versions/
 ├── tests/
 │   ├── unit/
 │   ├── integration/
@@ -127,6 +165,7 @@ Une **CI GitHub Actions** est configurée.
 ├── .flake8                        # config flake8
 ├── .gitignore
 ├── .pre-commit-config.yaml        # config pre-commit
+├── alembic.ini
 ├── Pipfile
 ├── Pipfile.lock
 ├── pyproject.toml                 # config black/isort
@@ -144,8 +183,10 @@ Une **CI GitHub Actions** est configurée.
 
 ## État du projet
 
-- ✔️ Phase d’initialisation terminée
-- ✔️ Environnement et CI en place
-- ✔️ Connexion PostgreSQL validée
+- ✔️ Environnement Python et PostgreSQL opérationnels
+- ✔️ ORM SQLAlchemy en place
+- ✔️ Migrations Alembic fonctionnelles
+- ✔️ Modèles et relations conformes à l’ERD
+- ✔️ Séparation claire admin / applicatif
 
-👉 Prochaine étape : **implémentation du schéma SQL à partir de l’ERD**.
+👉 **Prochaine étape** : implémentation de la CLI, de l’authentification et des permissions par rôle.
