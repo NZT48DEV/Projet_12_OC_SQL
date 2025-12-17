@@ -39,42 +39,67 @@ pipenv shell
 
 ## Configuration PostgreSQL
 
-Le projet utilise un **compte non privilégié** pour l’application.
+Le projet utilise un **compte applicatif non privilégié**, conformément aux bonnes pratiques de sécurité.
 
-À créer côté PostgreSQL :
-- Utilisateur : `epic_crm_app`
-- Base de données : `epic_crm`
-- Propriétaire / droits : `epic_crm_app`
+### Mise en place de la base de données
 
-> 🔐 Principe du moindre privilège :
-> l’application n’utilise **jamais** le compte administrateur `postgres`.
+- Création d’un utilisateur applicatif PostgreSQL :
+  - Nom : `epic_crm_app`
+  - Rôle : non superuser
+
+- Création d’une base de données dédiée :
+  - Nom : `epic_crm`
+  - Réalisée avec un compte administrateur (`postgres`)
+
+- Attribution des droits nécessaires à l’utilisateur applicatif :
+  - Connexion à la base
+  - Création et gestion des tables
+  - Exécution des migrations Alembic
+
+Exemples de droits accordés :
+
+```sql
+GRANT ALL PRIVILEGES ON DATABASE epic_crm TO epic_crm_app;
+GRANT ALL ON SCHEMA public TO epic_crm_app;
+```
+
+> ⚠️ L’utilisateur `postgres` est utilisé uniquement pour l’installation initiale.
+> L’application et les migrations utilisent exclusivement `epic_crm_app`.
 
 ---
 
 ## Variables d’environnement
 
+Les informations de connexion à la base de données ne sont **jamais stockées en dur** dans le code.
+
 Créer un fichier `.env` à la racine du projet :
 
 ```env
 DATABASE_URL=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
-SENTRY_DSN=
 ```
 
-⚠️ Les caractères spéciaux dans le mot de passe doivent être **encodés** (URL encoding).
-
-Un fichier `.env.example` est fourni.
+⚠️ Les caractères spéciaux du mot de passe doivent être encodés (URL encoding).
 
 ---
 
-## Base de données & migrations
+## Base de données et migrations
 
-Le schéma est géré via **SQLAlchemy + Alembic**.
+Le schéma de la base de données est géré via **SQLAlchemy** et **Alembic**.
 
-### Modèles ORM implémentés
-- `Employee`
-- `Client`
-- `Contract`
-- `Event`
+Une migration initiale a été générée automatiquement à partir des modèles ORM :
+
+```bash
+alembic revision --autogenerate -m "Schema initial"
+alembic upgrade head
+```
+
+Cette migration crée :
+- les tables `employees`, `clients`, `contracts`, `events`
+- les clés primaires
+- les clés étrangères
+- les contraintes UNIQUE nommées
+
+---
 
 ### Relations principales
 - `Client.sales_contact_id -> Employee.id`
@@ -90,19 +115,6 @@ Les timestamps sont stockés en **UTC**.
 ```bash
 pipenv run alembic revision --autogenerate -m "description"
 pipenv run alembic upgrade head
-```
-
----
-
-## Vérification rapide
-
-```bash
-pipenv run python -m app.main
-```
-
-Résultat attendu :
-```
-Connected to database 'epic_crm' as user 'epic_crm_app'
 ```
 
 ---
@@ -183,10 +195,14 @@ Une **CI GitHub Actions** est configurée.
 
 ## État du projet
 
-- ✔️ Environnement Python et PostgreSQL opérationnels
-- ✔️ ORM SQLAlchemy en place
-- ✔️ Migrations Alembic fonctionnelles
-- ✔️ Modèles et relations conformes à l’ERD
-- ✔️ Séparation claire admin / applicatif
+- ✔️ Environnement Python et PostgreSQL correctement configuré
+- ✔️ Base de données PostgreSQL fonctionnelle et accessible
+- ✔️ Utilisateur applicatif non privilégié avec les droits appropriés
+- ✔️ ORM SQLAlchemy opérationnel
+- ✔️ Migrations Alembic fonctionnelles (schéma versionné)
+- ✔️ Modèles et relations conformes à l’ERD et au cahier des charges
+- ✔️ Séparation claire entre administration de la base et usage applicatif
+- ✔️ Tests unitaires et tests d’intégration en place
+
 
 👉 **Prochaine étape** : implémentation de la CLI, de l’authentification et des permissions par rôle.
