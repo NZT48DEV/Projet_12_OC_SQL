@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
-from sqlalchemy import DateTime, Enum, String
+from sqlalchemy import DateTime, Enum, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -15,6 +15,7 @@ class Role(PyEnum):
 
 class Employee(Base):
     __tablename__ = "employees"
+    __table_args__ = (UniqueConstraint("email", name="uq_employees_email"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
@@ -22,7 +23,7 @@ class Employee(Base):
 
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
 
     role: Mapped[Role] = mapped_column(Enum(Role), nullable=False)
 

@@ -8,10 +8,12 @@ from app.models.client import Client
 
 
 def test_clients_table_exists(tables: Mapping[str, Table]):
+    """Vérifie que la table 'clients' est bien déclarée dans la metadata."""
     assert "clients" in tables
 
 
 def test_clients_columns(clients_table: Table):
+    """Vérifie colonnes, NULL/NOT NULL et types principaux de la table clients."""
     cols = clients_table.c
 
     assert set(cols.keys()) >= {
@@ -35,10 +37,12 @@ def test_clients_columns(clients_table: Table):
 
 
 def test_clients_email_unique_constraint_named(clients_table: Table):
+    """Vérifie la présence de la contrainte UNIQUE nommée uq_clients_email."""
     assert "uq_clients_email" in {c.name for c in clients_table.constraints}
 
 
 def test_clients_sales_contact_fk(clients_table: Table):
+    """Vérifie la FK clients.sales_contact_id -> employees.id."""
     fks = list(clients_table.foreign_key_constraints)
     assert any(
         fk.referred_table.name == "employees"
@@ -48,17 +52,18 @@ def test_clients_sales_contact_fk(clients_table: Table):
 
 
 def test_client_instance_creation():
+    """Vérifie qu'une instance Client se crée avec les champs attendus."""
     client = Client(
-        full_name="ACB Corp",
-        email="contact@acb.test",
+        full_name="ABC Corp",
+        email="contact@abc.test",
         phone="0600000000",
-        company_name="ACB",
+        company_name="ABC",
         sales_contact_id=1,
         created_at=datetime.now(timezone.utc),
     )
 
-    assert client.full_name == "ACB Corp"
-    assert client.email == "contact@acb.test"
+    assert client.full_name == "ABC Corp"
+    assert client.email == "contact@abc.test"
     assert client.phone == "0600000000"
-    assert client.company_name == "ACB"
+    assert client.company_name == "ABC"
     assert client.sales_contact_id == 1

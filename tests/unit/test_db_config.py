@@ -4,6 +4,7 @@ from tests.conftest import reload_module
 
 
 def test_config_raises_when_database_url_missing(monkeypatch: pytest.MonkeyPatch):
+    """Vérifie qu'on lève une erreur si DATABASE_URL est absent à l'import."""
     # Empêche dotenv de recharger le .env et de "ré-injecter" DATABASE_URL
     monkeypatch.setattr("dotenv.load_dotenv", lambda *args, **kwargs: None)
 
@@ -14,6 +15,7 @@ def test_config_raises_when_database_url_missing(monkeypatch: pytest.MonkeyPatch
 
 
 def test_config_reads_database_url(monkeypatch: pytest.MonkeyPatch):
+    """Vérifie que DATABASE_URL est lu depuis l'environnement."""
     monkeypatch.setattr("dotenv.load_dotenv", lambda *args, **kwargs: None)
 
     monkeypatch.setenv(

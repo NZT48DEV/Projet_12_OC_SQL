@@ -2,6 +2,7 @@ from tests.conftest import reload_module
 
 
 def test_engine_create_engine_called_with_database_url(monkeypatch):
+    """Vérifie que create_engine est appelé avec DATABASE_URL et les kwargs attendus."""
     # Mock DATABASE_URL
     monkeypatch.setattr(
         "app.db.config.DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/epic_crm"

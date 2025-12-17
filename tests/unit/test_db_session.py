@@ -2,6 +2,7 @@ from tests.conftest import reload_module
 
 
 def test_sessionmaker_called_with_expected_args(monkeypatch):
+    """Vérifie que SessionLocal est créé avec bind/flags cohérents."""
     fake_engine = object()
     monkeypatch.setattr("app.db.engine.engine", fake_engine)
 
