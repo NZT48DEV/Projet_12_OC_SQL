@@ -23,3 +23,11 @@ repos:
     rev: 7.3.0
     hooks:
       - id: flake8
+
+  - repo: local
+    hooks:
+      - id: pytest-unit
+        name: pytest (unit tests)
+        entry: pipenv run pytest -q tests/unit
+        language: system
+        pass_filenames: false

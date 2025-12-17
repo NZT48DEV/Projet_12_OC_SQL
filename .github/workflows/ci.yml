@@ -28,7 +28,7 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://epic_crm_app:epic_crm_password@localhost:5432/epic_crm
+      DATABASE_URL: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm
       SENTRY_DSN: ""
 
     steps:
@@ -46,6 +46,9 @@ jobs:
 
       - name: Run pre-commit
         run: pipenv run pre-commit run --all-files
+
+      - name: Apply migrations
+        run: pipenv run alembic upgrade head
 
       - name: Run tests
         run: pipenv run pytest -q
