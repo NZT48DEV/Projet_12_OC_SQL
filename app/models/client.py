@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -8,6 +8,7 @@ from app.db.base import Base
 
 class Client(Base):
     __tablename__ = "clients"
+    __table_args__ = (UniqueConstraint("email", name="uq_clients_email"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
