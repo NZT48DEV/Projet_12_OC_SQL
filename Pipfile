@@ -9,6 +9,7 @@ sqlalchemy = "*"
 psycopg2-binary = "*"
 python-dotenv = "*"
 alembic = "*"
+argon2-cffi = "*"
 
 [dev-packages]
 black = "*"
