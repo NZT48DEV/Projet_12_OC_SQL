@@ -119,6 +119,45 @@ pipenv run alembic upgrade head
 
 ---
 
+## Authentification et autorisation (CLI)
+
+L’application implémente une authentification sécurisée adaptée à une interface en ligne de commande (CLI).
+
+### Authentification
+- Authentification par **email + mot de passe**
+- Mots de passe **hachés** (jamais stockés en clair)
+- Vérification centralisée via un service métier dédié
+- Authentification persistante via un **stockage de session local**
+
+### Gestion de session
+- La session est stockée dans un fichier local : `~/.epiccrm/session.json`
+- Le fichier contient uniquement l’**identifiant de l’utilisateur**
+- Aucune donnée sensible (mot de passe, rôle en clair) n’est stockée
+- Déconnexion explicite possible
+- Les sessions invalides sont automatiquement nettoyées
+
+### Autorisation (rôles)
+Les actions sont protégées par un système de rôles :
+- `MANAGEMENT`
+- `SALES`
+- `SUPPORT`
+
+Un mécanisme d’autorisation centralisé permet de restreindre certaines commandes
+(exemple : commandes réservées au rôle `MANAGEMENT`).
+
+### Exemples de commandes CLI
+```bash
+python -m app.epicevents login <email> <password>
+python -m app.epicevents whoami
+python -m app.epicevents management-only
+python -m app.epicevents logout
+```
+
+> Le choix d’un stockage de session local est volontaire pour une application CLI.
+> Une implémentation basée sur des jetons JWT est envisagée comme évolution ultérieure.
+
+---
+
 ## Qualité de code
 
 Outils utilisés :
@@ -167,6 +206,8 @@ Une **CI GitHub Actions** est configurée.
 ├── docs/
 │   ├── erd.mmd                    # schéma ERD
 │   └── schema_notes.md            # notes de conception
+├── htmlcov/
+│   └── index.html                 # Coverage HTML
 ├── migrations/
 │   └── versions/
 ├── tests/
@@ -181,6 +222,7 @@ Une **CI GitHub Actions** est configurée.
 ├── Pipfile
 ├── Pipfile.lock
 ├── pyproject.toml                 # config black/isort
+├── pytest.ini                     # config pytest
 └── README.md
 ```
 
@@ -202,7 +244,9 @@ Une **CI GitHub Actions** est configurée.
 - ✔️ Migrations Alembic fonctionnelles (schéma versionné)
 - ✔️ Modèles et relations conformes à l’ERD et au cahier des charges
 - ✔️ Séparation claire entre administration de la base et usage applicatif
+- ✔️ Authentification persistante (CLI)
+- ✔️ Autorisation par rôle implémentée
 - ✔️ Tests unitaires et tests d’intégration en place
 
 
-👉 **Prochaine étape** : implémentation de la CLI, de l’authentification et des permissions par rôle.
+👉 **Prochaine étape** : évolution du mécanisme d’authentification vers une solution basée sur des jetons JWT, avant l’implémentation des fonctionnalités métier (**clients**, **contrats**, **événements**).
