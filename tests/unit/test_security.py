@@ -1,5 +1,3 @@
-"""Tests unitaires pour le hash et la vérification de mot de passe."""
-
 import pytest
 
 from app.core.security import hash_password, verify_password

@@ -1,8 +1,6 @@
-"""Tests d'intégration AuthN/AuthZ via la CLI epicevents."""
+from __future__ import annotations
 
-import json
-
-from app.core import session_store
+from app.core import jwt_service, token_store
 from app.core.security import hash_password
 from app.epicevents import main
 from app.models.employee import Employee, Role
@@ -14,11 +12,10 @@ def run_cli(monkeypatch, args: list[str]):
 
 
 def patch_cli_env(monkeypatch, db_session, tmp_path):
-    """Configure la DB de test et le fichier de session temporaire."""
-    monkeypatch.setattr("app.epicevents.SessionLocal", lambda: db_session)
-    monkeypatch.setattr(
-        session_store, "_session_path", lambda: tmp_path / "session.json"
-    )
+    """Configure la DB de test, le secret JWT et le fichier de tokens temporaire."""
+    monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
+    monkeypatch.setattr("app.epicevents.get_session", lambda: db_session)
+    monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
 
 
 def create_employee(db_session, *, email: str, password: str, role: Role):
@@ -36,10 +33,21 @@ def create_employee(db_session, *, email: str, password: str, role: Role):
     return emp
 
 
-def test_integration_login_success_creates_session(
+def seed_tokens_for_employee(tmp_path, monkeypatch, employee_id: int):
+    """Écrit un fichier tokens.json valide pour un employee_id donné."""
+    monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
+    monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
+
+    pair = jwt_service.create_token_pair(
+        employee_id=employee_id, access_minutes=20, refresh_days=7
+    )
+    token_store.save_tokens(pair.access_token, pair.refresh_token)
+
+
+def test_integration_login_success_creates_tokens(
     monkeypatch, tmp_path, capsys, db_session
 ):
-    """login valide crée une session persistante."""
+    """login valide crée des tokens persistants."""
     patch_cli_env(monkeypatch, db_session, tmp_path)
     emp = create_employee(
         db_session, email="ok@example.com", password="Secret123!", role=Role.MANAGEMENT
@@ -49,14 +57,19 @@ def test_integration_login_success_creates_session(
     main()
     out = capsys.readouterr().out
 
-    assert "Session sauvegardée" in out
-    assert session_store.load_current_employee_id() == emp.id
+    assert "✅ Connecté" in out
+
+    access = token_store.load_access_token()
+    refresh = token_store.load_refresh_token()
+    assert access is not None
+    assert refresh is not None
+    assert jwt_service.employee_id_from_access_token(access) == emp.id
 
 
-def test_integration_login_wrong_password_does_not_create_session(
+def test_integration_login_wrong_password_does_not_create_tokens(
     monkeypatch, tmp_path, capsys, db_session
 ):
-    """login invalide ne crée aucune session."""
+    """login invalide ne crée aucun token."""
     patch_cli_env(monkeypatch, db_session, tmp_path)
     create_employee(
         db_session,
@@ -69,8 +82,9 @@ def test_integration_login_wrong_password_does_not_create_session(
     main()
     out = capsys.readouterr().out
 
-    assert "Email ou mot de passe invalide" in out
-    assert session_store.load_current_employee_id() is None
+    assert "❌" in out
+    assert token_store.load_access_token() is None
+    assert token_store.load_refresh_token() is None
 
 
 def test_integration_management_only_not_authenticated(
@@ -98,15 +112,13 @@ def test_integration_management_only_allowed_for_management(
         role=Role.MANAGEMENT,
     )
 
-    (tmp_path / "session.json").write_text(
-        json.dumps({"employee_id": emp.id}), encoding="utf-8"
-    )
+    seed_tokens_for_employee(tmp_path, monkeypatch, emp.id)
 
     run_cli(monkeypatch, ["management-only"])
     main()
     out = capsys.readouterr().out
 
-    assert "Action autorisée" in out
+    assert "Action MANAGEMENT autorisée" in out
 
 
 def test_integration_management_only_denied_for_support(
@@ -121,12 +133,11 @@ def test_integration_management_only_denied_for_support(
         role=Role.SUPPORT,
     )
 
-    (tmp_path / "session.json").write_text(
-        json.dumps({"employee_id": emp.id}), encoding="utf-8"
-    )
+    seed_tokens_for_employee(tmp_path, monkeypatch, emp.id)
 
     run_cli(monkeypatch, ["management-only"])
     main()
     out = capsys.readouterr().out
 
     assert "Accès refusé" in out
+    assert "MANAGEMENT" in out

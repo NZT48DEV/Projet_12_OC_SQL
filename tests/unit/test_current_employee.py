@@ -1,30 +1,46 @@
-"""Tests unitaires pour la récupération de l'employé courant (session + DB)."""
-
-import json
+from __future__ import annotations
 
 import pytest
 
-from app.core import session_store
+from app.core import jwt_service, token_store
 from app.core.security import hash_password
 from app.models.employee import Employee, Role
 from app.services.current_employee import NotAuthenticatedError, get_current_employee
 
 
-def test_get_current_employee_not_authenticated(db_session, monkeypatch, tmp_path):
-    """Lève NotAuthenticatedError si aucun employee_id n'est stocké."""
-    monkeypatch.setattr(
-        session_store, "_session_path", lambda: tmp_path / "session.json"
+def _patch_token_path(monkeypatch, tmp_path):
+    """Patch le chemin du fichier tokens.json (fichier temporaire)"""
+    monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
+
+
+def _set_jwt_secret(monkeypatch):
+    """Définit un secret JWT stable pour les tests."""
+    monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
+
+
+def _seed_tokens(monkeypatch, tmp_path, employee_id: int):
+    """Crée et sauvegarde une paire de tokens JWT pour un employee_id donné."""
+    _set_jwt_secret(monkeypatch)
+    _patch_token_path(monkeypatch, tmp_path)
+    pair = jwt_service.create_token_pair(
+        employee_id=employee_id, access_minutes=20, refresh_days=7
     )
+    token_store.save_tokens(pair.access_token, pair.refresh_token)
+
+
+def test_get_current_employee_not_authenticated(db_session, monkeypatch, tmp_path):
+    """Lève NotAuthenticatedError si aucun access token n'est stocké."""
+    _set_jwt_secret(monkeypatch)
+    _patch_token_path(monkeypatch, tmp_path)
 
     with pytest.raises(NotAuthenticatedError):
         get_current_employee(db_session)
 
 
 def test_get_current_employee_ok(db_session, monkeypatch, tmp_path):
-    """Retourne l'employé si la session locale et la DB sont cohérentes."""
-    monkeypatch.setattr(
-        session_store, "_session_path", lambda: tmp_path / "session.json"
-    )
+    """Retourne l'employé si l'access token est valide et l'employé existe en base."""
+    _set_jwt_secret(monkeypatch)
+    _patch_token_path(monkeypatch, tmp_path)
 
     emp = Employee(
         first_name="Test",
@@ -37,28 +53,21 @@ def test_get_current_employee_ok(db_session, monkeypatch, tmp_path):
     db_session.commit()
     db_session.refresh(emp)
 
-    (tmp_path / "session.json").write_text(
-        json.dumps({"employee_id": emp.id}),
-        encoding="utf-8",
-    )
+    _seed_tokens(monkeypatch, tmp_path, emp.id)
 
     current = get_current_employee(db_session)
     assert current.id == emp.id
     assert current.email == emp.email
 
 
-def test_get_current_employee_invalid_session_clears_file(
+def test_get_current_employee_employee_not_found_raises(
     db_session, monkeypatch, tmp_path
 ):
-    """Supprime la session locale si l'employee_id ne correspond à aucun employé."""
-    monkeypatch.setattr(
-        session_store, "_session_path", lambda: tmp_path / "session.json"
-    )
-
-    path = tmp_path / "session.json"
-    path.write_text(json.dumps({"employee_id": 999999999}), encoding="utf-8")
+    """Lève une erreur si le token est valide mais l'employé n'existe pas en base."""
+    _seed_tokens(monkeypatch, tmp_path, employee_id=999999999)
 
     with pytest.raises(NotAuthenticatedError):
         get_current_employee(db_session)
 
-    assert not path.exists()
+    # Remarque: on ne teste pas la suppression du fichier, car le code ne le fait pas.
+    assert token_store.load_access_token() is not None

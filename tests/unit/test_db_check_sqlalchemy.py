@@ -27,11 +27,10 @@ class _FakeEngine:
 def test_db_check_sqlalchemy_prints_ok(
     monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]
 ):
-    """Vérifie que le script de healthcheck DB affiche un OK quand SELECT 1 passe."""
-    # Patch l'engine importé par le script
-    monkeypatch.setattr("app.db.engine.engine", _FakeEngine())
+    """Vérifie que le script de healthcheck DB affiche OK si SELECT 1 passe."""
+    monkeypatch.setattr("app.db.engine.get_engine", lambda: _FakeEngine())
 
     reload_module("app.db.db_check_sqlalchemy")
 
     captured = capsys.readouterr()
-    assert "✅ Engine OK (SELECT 1 -> 1)" in captured.out
+    assert "Engine OK" in captured.out

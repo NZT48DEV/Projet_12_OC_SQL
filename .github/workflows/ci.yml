@@ -18,17 +18,19 @@ jobs:
         env:
           POSTGRES_USER: epic_crm_app
           POSTGRES_PASSWORD: epic_crm_password
-          POSTGRES_DB: epic_crm
+          POSTGRES_DB: epic_crm_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U epic_crm_app -d epic_crm"
+          --health-cmd="pg_isready -U epic_crm_app -d epic_crm_test"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm
+      DATABASE_URL: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
+      DATABASE_URL_TEST: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
+      EPICCRM_JWT_SECRET: ${{ secrets.EPICCRM_JWT_SECRET }}
       SENTRY_DSN: ""
 
     steps:
@@ -44,11 +46,17 @@ jobs:
       - name: Install dependencies
         run: pipenv install --dev
 
-      - name: Run pre-commit
-        run: pipenv run pre-commit run --all-files
+      - name: Check required environment variables
+        run: |
+          test -n "$DATABASE_URL" || exit 1
+          test -n "$DATABASE_URL_TEST" || exit 1
+          test -n "$EPICCRM_JWT_SECRET" || exit 1
 
       - name: Apply migrations
         run: pipenv run alembic upgrade head
+
+      - name: Run pre-commit
+        run: pipenv run pre-commit run --all-files
 
       - name: Run tests
         run: pipenv run pytest -q
