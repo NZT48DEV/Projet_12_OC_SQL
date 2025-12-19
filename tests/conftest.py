@@ -1,13 +1,38 @@
+from __future__ import annotations
+
 import importlib
+import os
 import sys
 
 import pytest
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import app.db.config as db_config
 import app.models  # noqa: F401
 from app.db.base import Base
-from app.db.config import DATABASE_URL
+
+load_dotenv()
+
+
+def _test_database_url() -> str:
+    """Retourne l'URL de la base de test à utiliser pendant pytest."""
+    url = os.getenv("DATABASE_URL_TEST")
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL_TEST est manquant. Ajoute-le dans ton .env "
+            "(ex: postgresql+psycopg://user:pwd@localhost:5432/epic_crm_test)."
+        )
+    return url
+
+
+@pytest.fixture(scope="session", autouse=True)
+def force_test_database_url() -> None:
+    """Force DATABASE_URL à pointer vers la base de test."""
+    url = _test_database_url()
+    os.environ["DATABASE_URL"] = url
+    db_config.DATABASE_URL = url
 
 
 @pytest.fixture(scope="session")
@@ -47,17 +72,14 @@ def events_table(tables):
 
 
 @pytest.fixture(scope="session")
-def engine():
+def engine(force_test_database_url):
     """Crée un engine SQLAlchemy de session via DATABASE_URL."""
-    engine = create_engine(DATABASE_URL)
-    return engine
+    return create_engine(os.environ["DATABASE_URL"])
 
 
 @pytest.fixture(scope="session")
 def apply_migrations(engine):
-    """
-    Crée toutes les tables au début des tests d'intégration puis les supprime à la fin.
-    """
+    """Crée toutes les tables au début des tests puis les supprime à la fin."""
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
@@ -65,9 +87,7 @@ def apply_migrations(engine):
 
 @pytest.fixture
 def db_session(engine, apply_migrations):
-    """
-    Fournit une session SQLAlchemy isolée par test (transaction + rollback).
-    """
+    """Fournit une session SQLAlchemy isolée par test via transaction + rollback."""
     connection = engine.connect()
     transaction = connection.begin()
 
@@ -83,9 +103,7 @@ def db_session(engine, apply_migrations):
 
 
 def reload_module(module_name: str):
-    """
-    Force le rechargement d'un module Python (utile pour tester les imports).
-    """
+    """Force le rechargement d'un module Python pour tester un import à froid."""
     if module_name in sys.modules:
         del sys.modules[module_name]
     return importlib.import_module(module_name)

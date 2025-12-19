@@ -1,5 +1,3 @@
-"""Tests unitaires pour l'autorisation (require_role)."""
-
 import pytest
 
 from app.core.authorization import AuthorizationError, require_role

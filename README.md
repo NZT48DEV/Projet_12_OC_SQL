@@ -37,6 +37,7 @@ pipenv shell
 
 ---
 
+
 ## Configuration PostgreSQL
 
 Le projet utilise un **compte applicatif non privilégié**, conformément aux bonnes pratiques de sécurité.
@@ -47,24 +48,36 @@ Le projet utilise un **compte applicatif non privilégié**, conformément aux b
   - Nom : `epic_crm_app`
   - Rôle : non superuser
 
-- Création d’une base de données dédiée :
-  - Nom : `epic_crm`
-  - Réalisée avec un compte administrateur (`postgres`)
+- Création de bases de données dédiées :
+  - **Base de développement** : `epic_crm`
+  - **Base de test** : `epic_crm_test`
+  - Réalisées avec un compte administrateur (`postgres`)
 
 - Attribution des droits nécessaires à l’utilisateur applicatif :
-  - Connexion à la base
+  - Connexion aux bases
   - Création et gestion des tables
   - Exécution des migrations Alembic
+  - Utilisation dans les tests automatisés (pytest)
 
 Exemples de droits accordés :
 
 ```sql
+-- Bases de données
 GRANT ALL PRIVILEGES ON DATABASE epic_crm TO epic_crm_app;
-GRANT ALL ON SCHEMA public TO epic_crm_app;
+GRANT ALL PRIVILEGES ON DATABASE epic_crm_test TO epic_crm_app;
+
+-- Schéma public
+GRANT USAGE, CREATE ON SCHEMA public TO epic_crm_app;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO epic_crm_app;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO epic_crm_app;
 ```
 
 > ⚠️ L’utilisateur `postgres` est utilisé uniquement pour l’installation initiale.
-> L’application et les migrations utilisent exclusivement `epic_crm_app`.
+> L’application, les migrations **et les tests automatisés** utilisent exclusivement `epic_crm_app`.
 
 ---
 
@@ -75,8 +88,16 @@ Les informations de connexion à la base de données ne sont **jamais stockées 
 Créer un fichier `.env` à la racine du projet :
 
 ```env
+# Base de développement
 DATABASE_URL=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
+
+# Base de test (utilisée par pytest)
+DATABASE_URL_TEST=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm_test
 ```
+
+- La base **`epic_crm`** est utilisée en développement et en production
+- La base **`epic_crm_test`** est utilisée exclusivement lors de l’exécution des tests
+- Les tests ne modifient jamais les données de la base de développement
 
 ⚠️ Les caractères spéciaux du mot de passe doivent être encodés (URL encoding).
 
@@ -119,42 +140,138 @@ pipenv run alembic upgrade head
 
 ---
 
-## Authentification et autorisation (CLI)
+## Authentification et autorisation (CLI – JWT)
 
-L’application implémente une authentification sécurisée adaptée à une interface en ligne de commande (CLI).
+L’application utilise désormais une **authentification basée sur des jetons JWT**, adaptée à une interface en ligne de commande (CLI), tout en respectant les bonnes pratiques de sécurité.
 
-### Authentification
+### Principes généraux
 - Authentification par **email + mot de passe**
 - Mots de passe **hachés** (jamais stockés en clair)
-- Vérification centralisée via un service métier dédié
-- Authentification persistante via un **stockage de session local**
+- Utilisation de **JSON Web Tokens (JWT)** pour l’authentification
+- Deux types de jetons :
+  - **Access token** (courte durée)
+  - **Refresh token** (durée plus longue)
+- Les jetons sont stockés **localement** sur la machine de l’utilisateur
 
-### Gestion de session
-- La session est stockée dans un fichier local : `~/.epiccrm/session.json`
-- Le fichier contient uniquement l’**identifiant de l’utilisateur**
-- Aucune donnée sensible (mot de passe, rôle en clair) n’est stockée
-- Déconnexion explicite possible
-- Les sessions invalides sont automatiquement nettoyées
+---
 
-### Autorisation (rôles)
-Les actions sont protégées par un système de rôles :
+### Cycle de vie des tokens
+
+- **Access token**
+  - Durée de validité : **20 minutes**
+  - Utilisé pour authentifier chaque commande protégée
+  - Contient l’identifiant de l’utilisateur et son rôle
+
+- **Refresh token**
+  - Durée de validité plus longue
+  - Permet de régénérer un nouvel access token sans se reconnecter
+  - Rotation automatique lors du rafraîchissement
+
+Les tokens sont stockés dans :
+```
+~/.epiccrm/tokens.json
+```
+
+Aucune donnée sensible (mot de passe, informations personnelles) n’est stockée en clair.
+
+---
+
+### Variables d’environnement JWT
+
+Le secret JWT doit être fourni via une variable d’environnement.
+
+Dans le fichier `.env` :
+
+```env
+EPICCRM_JWT_SECRET=VOTRE_SECRET_JWT
+```
+
+- Le secret doit être **long**, **aléatoire** et **confidentiel**
+- Il n’est jamais versionné dans le dépôt Git
+- En CI (GitHub Actions), il est fourni via les **Secrets GitHub**
+
+---
+
+### Commandes CLI liées à l’authentification
+
+#### Connexion
+```bash
+python -m app.epicevents login <email> <password>
+```
+
+- Génère un access token et un refresh token
+- Stocke les tokens localement
+
+#### Afficher l’utilisateur courant
+```bash
+python -m app.epicevents whoami
+```
+
+- Vérifie la validité de l’access token
+- Affiche l’identité et le rôle de l’utilisateur connecté
+
+#### Rafraîchir le token
+```bash
+python -m app.epicevents refresh-token
+```
+
+- Utilise le refresh token pour générer un nouvel access token
+- Rotation du refresh token
+
+#### Déconnexion
+```bash
+python -m app.epicevents logout
+```
+
+- Supprime les tokens locaux
+- Nécessite une reconnexion complète
+
+---
+
+### Autorisation par rôle
+
+Les commandes sensibles sont protégées par un système de rôles :
+
 - `MANAGEMENT`
 - `SALES`
 - `SUPPORT`
 
-Un mécanisme d’autorisation centralisé permet de restreindre certaines commandes
-(exemple : commandes réservées au rôle `MANAGEMENT`).
+Un mécanisme d’autorisation centralisé vérifie :
+- l’authentification via JWT
+- le rôle de l’utilisateur
 
-### Exemples de commandes CLI
+Exemple :
 ```bash
-python -m app.epicevents login <email> <password>
-python -m app.epicevents whoami
 python -m app.epicevents management-only
-python -m app.epicevents logout
 ```
 
-> Le choix d’un stockage de session local est volontaire pour une application CLI.
-> Une implémentation basée sur des jetons JWT est envisagée comme évolution ultérieure.
+Cette commande est accessible **uniquement** aux utilisateurs ayant le rôle `MANAGEMENT`.
+
+---
+
+### Bootstrap du premier compte
+
+Afin d’éviter un système bloquant lors de la première installation :
+
+- Si **aucun employé n’existe en base**, la création du **premier compte MANAGEMENT** est autorisée sans authentification
+- Dès qu’un premier employé existe :
+  - toutes les créations d’employés nécessitent une authentification
+  - le rôle `MANAGEMENT` est requis
+
+Exemple :
+```bash
+python -m app.epicevents create-employee Anthony Test admin@epiccrm.com Secret123! MANAGEMENT
+```
+
+---
+
+### Sécurité et bonnes pratiques
+
+- Les JWT ont une durée de vie courte
+- Les refresh tokens sont rotatifs
+- Les secrets sont fournis par variables d’environnement
+- Les accès sont strictement contrôlés par rôle
+- Le mécanisme est compatible CI/CD et environnements multiples
 
 ---
 
@@ -191,38 +308,61 @@ Une **CI GitHub Actions** est configurée.
 .
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                 # CI GitHub Actions (lint + tests + postgres)
+│       └── ci.yml                 # CI GitHub Actions (lint + tests + PostgreSQL)
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                    # point d’entrée (smoke test / lancement)
-│   ├── core/                      # configuration, sécurité, logging
-│   ├── db/                        # connexion DB + base ORM
-│   ├── models/                    # modèles ORM (Employee, Client, Contract, Event)
-│   ├── repositories/              # accès aux données (DAL)
-│   ├── services/                  # logique métier (auth, règles, permissions)
-│   └── cli/                       # interface en ligne de commande
-├── db/
-│   └── 01_schema.sql              # schéma SQL (à implémenter à partir de l'ERD)
-├── docs/
-│   ├── erd.mmd                    # schéma ERD
-│   └── schema_notes.md            # notes de conception
-├── htmlcov/
-│   └── index.html                 # Coverage HTML
-├── migrations/
+│   ├── epicevents.py              # Point d’entrée CLI (argparse)
+│   ├── cli/                       # Interface en ligne de commande
+│   │   ├── __init__.py
+│   │   └── commands.py
+│   ├── core/                      # Sécurité, JWT, configuration, logging
+│   │   ├── authorization.py
+│   │   ├── jwt_service.py
+│   │   ├── security.py
+│   │   └── token_store.py
+│   ├── db/                        # Gestion base de données (SQLAlchemy)
+│   │   ├── base.py                # Déclaration Base ORM
+│   │   ├── config.py              # Chargement DATABASE_URL
+│   │   ├── engine.py              # Création de l'engine SQLAlchemy
+│   │   ├── session.py             # SessionLocal
+│   │   ├── init_db.py             # Initialisation DB
+│   │   └── db_check_sqlalchemy.py # Vérifications de cohérence
+│   ├── models/                    # Modèles ORM
+│   │   ├── employee.py
+│   │   ├── client.py
+│   │   ├── contract.py
+│   │   └── event.py
+│   ├── repositories/              # Accès aux données (DAL)
+│   │   ├── employee_repository.py
+│   │   ├── client_repository.py
+│   │   ├── contract_repository.py
+│   │   └── event_repository.py
+│   └── services/                  # Logique métier
+│       ├── auth_service.py
+│       ├── client_service.py
+│       ├── contract_service.py
+│       ├── current_employee.py
+│       └── event_service.py
+├── migrations/                    # Migrations Alembic
 │   └── versions/
 ├── tests/
 │   ├── unit/
 │   ├── integration/
 │   └── functional/
-├── .env.example                   # modèle (sans secrets)
-├── .flake8                        # config flake8
+├── docs/
+│   ├── erd.mmd                    # Schéma ERD
+│   └── schema_notes.md            # Notes de conception
+├── htmlcov/
+│   └── index.html                 # Rapport de couverture pytest
+├── .env.example                   # Modèle de configuration (sans secrets)
+├── .flake8
 ├── .gitignore
-├── .pre-commit-config.yaml        # config pre-commit
+├── .pre-commit-config.yaml
 ├── alembic.ini
 ├── Pipfile
 ├── Pipfile.lock
-├── pyproject.toml                 # config black/isort
-├── pytest.ini                     # config pytest
+├── pyproject.toml
+├── pytest.ini
 └── README.md
 ```
 
@@ -238,15 +378,18 @@ Une **CI GitHub Actions** est configurée.
 ## État du projet
 
 - ✔️ Environnement Python et PostgreSQL correctement configuré
-- ✔️ Base de données PostgreSQL fonctionnelle et accessible
-- ✔️ Utilisateur applicatif non privilégié avec les droits appropriés
+- ✔️ Bases de données **développement** et **test** séparées et fonctionnelles
+- ✔️ Utilisateur applicatif PostgreSQL non privilégié avec les droits appropriés
 - ✔️ ORM SQLAlchemy opérationnel
 - ✔️ Migrations Alembic fonctionnelles (schéma versionné)
 - ✔️ Modèles et relations conformes à l’ERD et au cahier des charges
 - ✔️ Séparation claire entre administration de la base et usage applicatif
-- ✔️ Authentification persistante (CLI)
-- ✔️ Autorisation par rôle implémentée
-- ✔️ Tests unitaires et tests d’intégration en place
+- ✔️ Authentification **JWT** fonctionnelle en CLI (access + refresh tokens)
+- ✔️ Stockage local sécurisé des tokens
+- ✔️ Autorisation par rôle implémentée (MANAGEMENT / SALES / SUPPORT)
+- ✔️ Mécanisme de **bootstrap** pour le premier compte MANAGEMENT
+- ✔️ Tests unitaires et tests d’intégration automatisés (pytest + PostgreSQL)
+- ✔️ Pipeline CI fonctionnel (lint, tests, base PostgreSQL)
 
-
-👉 **Prochaine étape** : évolution du mécanisme d’authentification vers une solution basée sur des jetons JWT, avant l’implémentation des fonctionnalités métier (**clients**, **contrats**, **événements**).
+👉 **Prochaine étape** : implémentation complète des fonctionnalités métier
+(**clients**, **contrats**, **événements**) avec application stricte des règles d’autorisation et des contraintes métier.

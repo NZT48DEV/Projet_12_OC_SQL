@@ -28,7 +28,8 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      EPICCRM_JWT_SECRET: ${{ secrets.EPICCRM_JWT_SECRET }}
       SENTRY_DSN: ""
 
     steps:
@@ -46,6 +47,12 @@ jobs:
 
       - name: Run pre-commit
         run: pipenv run pre-commit run --all-files
+
+      - name: Check required environment variables
+        run: |
+          test -n "$EPICCRM_JWT_SECRET" || (echo "❌ Missing EPICCRM_JWT_SECRET" && exit 1)
+          test -n "$DATABASE_URL" || (echo "❌ Missing DATABASE_URL" && exit 1)
+          echo "✅ Required environment variables are set"
 
       - name: Apply migrations
         run: pipenv run alembic upgrade head
