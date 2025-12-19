@@ -1,9 +1,9 @@
 from sqlalchemy.orm import sessionmaker
 
-from app.db.engine import engine
+from app.db.engine import get_engine
 
 SessionLocal = sessionmaker(
-    bind=engine,
+    bind=get_engine(),
     autoflush=False,
     autocommit=False,
 )
