@@ -17,14 +17,11 @@ load_dotenv()
 
 
 def _test_database_url() -> str:
-    """Retourne l'URL de la base de test à utiliser pendant pytest."""
-    url = os.getenv("DATABASE_URL_TEST")
-    if not url:
-        raise RuntimeError(
-            "DATABASE_URL_TEST est manquant. Ajoute-le dans ton .env "
-            "(ex: postgresql+psycopg://user:pwd@localhost:5432/epic_crm_test)."
-        )
-    return url
+    """Retourne l'URL de la base de test."""
+    return os.getenv(
+        "DATABASE_URL_TEST",
+        "postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test",
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
