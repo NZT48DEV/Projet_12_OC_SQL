@@ -18,7 +18,6 @@ jobs:
         env:
           POSTGRES_USER: epic_crm_app
           POSTGRES_PASSWORD: epic_crm_password
-          # On démarre avec la DB de test (créée automatiquement par l'image)
           POSTGRES_DB: epic_crm_test
         ports:
           - 5432:5432
@@ -29,11 +28,8 @@ jobs:
           --health-retries=5
 
     env:
-      # DB "app" (pour migrations / usage normal)
-      DATABASE_URL: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm
-      # DB "tests" (utilisée par pytest via conftest.py)
+      DATABASE_URL: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
       DATABASE_URL_TEST: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
-
       EPICCRM_JWT_SECRET: ${{ secrets.EPICCRM_JWT_SECRET }}
       SENTRY_DSN: ""
 
@@ -52,18 +48,9 @@ jobs:
 
       - name: Check required environment variables
         run: |
-          test -n "$EPICCRM_JWT_SECRET" || (echo "Missing EPICCRM_JWT_SECRET" && exit 1)
-          test -n "$DATABASE_URL" || (echo "Missing DATABASE_URL" && exit 1)
-          test -n "$DATABASE_URL_TEST" || (echo "Missing DATABASE_URL_TEST" && exit 1)
-          echo "Required environment variables are set"
-
-      - name: Install psql client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Create main database
-        run: |
-          psql postgresql://epic_crm_app:epic_crm_password@localhost:5432/postgres \
-          -c "CREATE DATABASE epic_crm;"
+          test -n "$DATABASE_URL" || exit 1
+          test -n "$DATABASE_URL_TEST" || exit 1
+          test -n "$EPICCRM_JWT_SECRET" || exit 1
 
       - name: Apply migrations
         run: pipenv run alembic upgrade head
