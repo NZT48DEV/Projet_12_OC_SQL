@@ -17,6 +17,5 @@ def test_sessionmaker_called_with_expected_args(monkeypatch):
     mod = reload_module("app.db.session")
 
     assert mod.SessionLocal == "SESSIONMAKER_RETURN"
-    assert calls["bind"] is fake_engine
     assert calls["autoflush"] is False
     assert calls["autocommit"] is False

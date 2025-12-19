@@ -14,7 +14,7 @@ def run_cli(monkeypatch, args: list[str]):
 def patch_cli_env(monkeypatch, db_session, tmp_path):
     """Configure la DB de test, le secret JWT et le fichier de tokens temporaire."""
     monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
-    monkeypatch.setattr("app.epicevents.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.epicevents.get_session", lambda: db_session)
     monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
 
 

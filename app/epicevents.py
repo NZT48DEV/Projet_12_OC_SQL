@@ -7,7 +7,7 @@ from app.core.jwt_service import TokenError, create_token_pair, refresh_access_t
 from app.core.security import hash_password
 from app.core.token_store import clear_tokens, load_refresh_token, save_tokens
 from app.db.init_db import init_db
-from app.db.session import SessionLocal
+from app.db.session import get_session
 from app.models.employee import Employee, Role
 from app.services.auth_service import AuthenticationError, authenticate_employee
 from app.services.current_employee import NotAuthenticatedError, get_current_employee
@@ -19,7 +19,7 @@ from app.services.current_employee import NotAuthenticatedError, get_current_emp
 
 def cmd_login(args: argparse.Namespace) -> None:
     """Authentifie un employé et stocke les tokens JWT localement."""
-    session = SessionLocal()
+    session = get_session()
     try:
         employee = authenticate_employee(session, args.email, args.password)
 
@@ -70,7 +70,7 @@ def cmd_refresh_token(_: argparse.Namespace) -> None:
 
 def cmd_whoami(_: argparse.Namespace) -> None:
     """Affiche l'utilisateur actuellement authentifié (via access token)."""
-    session = SessionLocal()
+    session = get_session()
     try:
         employee = get_current_employee(session)
         print(
@@ -85,7 +85,7 @@ def cmd_whoami(_: argparse.Namespace) -> None:
 
 def cmd_management_only(_: argparse.Namespace) -> None:
     """Exécute une action réservée au rôle MANAGEMENT."""
-    session = SessionLocal()
+    session = get_session()
     try:
         employee = get_current_employee(session)
         require_role(employee.role, allowed={Role.MANAGEMENT})
@@ -100,7 +100,7 @@ def cmd_management_only(_: argparse.Namespace) -> None:
 
 def cmd_create_employee(args: argparse.Namespace) -> None:
     """Crée un employé (bootstrap du premier MANAGEMENT possible)."""
-    session = SessionLocal()
+    session = get_session()
     try:
         employees_count = session.query(Employee).count()
         if employees_count == 0:

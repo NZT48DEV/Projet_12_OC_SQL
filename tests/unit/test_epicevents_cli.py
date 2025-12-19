@@ -13,7 +13,7 @@ def run_cli(monkeypatch, args: list[str]):
 
 def patch_sessionlocal(monkeypatch, db_session):
     """Force epicevents.SessionLocal() à renvoyer la session de test."""
-    monkeypatch.setattr("app.epicevents.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.epicevents.get_session", lambda: db_session)
 
 
 def patch_tokens(monkeypatch, tmp_path):
