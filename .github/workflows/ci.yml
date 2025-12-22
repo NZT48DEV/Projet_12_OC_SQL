@@ -32,6 +32,10 @@ jobs:
       DATABASE_URL_TEST: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
       EPICCRM_JWT_SECRET: ${{ secrets.EPICCRM_JWT_SECRET }}
       SENTRY_DSN: ""
+      EPICCRM_JWT_ACCESS_MINUTES: ${{ vars.EPICCRM_JWT_ACCESS_MINUTES }}
+      EPICCRM_JWT_REFRESH_DAYS: ${{ vars.EPICCRM_JWT_REFRESH_DAYS }}
+      EPICCRM_JWT_ALG: ${{ vars.EPICCRM_JWT_ALG }}
+      EPICCRM_JWT_ROTATE_REFRESH: ${{ vars.EPICCRM_JWT_ROTATE_REFRESH }}
 
     steps:
       - uses: actions/checkout@v4

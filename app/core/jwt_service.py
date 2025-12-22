@@ -27,12 +27,41 @@ def _secret() -> str:
     return secret
 
 
-_ALG = "HS256"
+def _get_int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"{name} doit être un entier (valeur actuelle: {raw!r})."
+        ) from exc
+
+
+def _get_bool_env(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+_ALG = os.getenv("EPICCRM_JWT_ALG", "HS256")
+_DEFAULT_ACCESS_MINUTES = _get_int_env("EPICCRM_JWT_ACCESS_MINUTES", 20)
+_DEFAULT_REFRESH_DAYS = _get_int_env("EPICCRM_JWT_REFRESH_DAYS", 7)
+_DEFAULT_ROTATE_REFRESH = _get_bool_env("EPICCRM_JWT_ROTATE_REFRESH", True)
 
 
 def create_token_pair(
-    employee_id: int, access_minutes: int = 20, refresh_days: int = 7
+    employee_id: int,
+    access_minutes: int | None = None,
+    refresh_days: int | None = None,
 ) -> TokenPair:
+    access_minutes = (
+        _DEFAULT_ACCESS_MINUTES if access_minutes is None else access_minutes
+    )
+    refresh_days = _DEFAULT_REFRESH_DAYS if refresh_days is None else refresh_days
+
     now = datetime.now(timezone.utc)
 
     access_payload: Dict[str, Any] = {
@@ -78,13 +107,23 @@ def employee_id_from_access_token(token: str) -> int:
 
 
 def refresh_access_token(
-    refresh_token: str, access_minutes: int = 20, rotate_refresh: bool = True
+    refresh_token: str,
+    access_minutes: int | None = None,
+    rotate_refresh: bool | None = None,
 ) -> TokenPair:
+    access_minutes = (
+        _DEFAULT_ACCESS_MINUTES if access_minutes is None else access_minutes
+    )
+    rotate_refresh = (
+        _DEFAULT_ROTATE_REFRESH if rotate_refresh is None else rotate_refresh
+    )
+
     payload = decode_and_validate(refresh_token, expected_type="refresh")
     employee_id = int(payload["sub"])
 
     # Recommandé : rotation du refresh token
     if rotate_refresh:
+        # refresh_days=None -> prendra la valeur de .env
         return create_token_pair(employee_id, access_minutes=access_minutes)
 
     # Sinon : on ne régénère que l'access token
