@@ -196,7 +196,7 @@ Si le coffre sécurisé n’est pas disponible, l’application utilise un stock
 
 ```text
 ~/.epiccrm/tokens.json
-
+```
 
 ---
 
