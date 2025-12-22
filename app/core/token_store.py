@@ -77,10 +77,8 @@ def save_tokens(access_token: str, refresh_token: str) -> None:
     2) Fallback fichier local (tokens.json) avec permissions restreintes (best effort)
     """
     if _keyring_available():
-        print("KEYRING available =", _keyring_available())
         try:
             _keyring_set(access_token, refresh_token)
-            print("Tokens saved in keyring")
             return
         except Exception:
             # Backend keyring absent/mal configuré -> fallback fichier
