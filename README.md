@@ -149,7 +149,7 @@ pipenv run alembic upgrade head
 
 ## Authentification et autorisation (CLI – JWT)
 
-L’application utilise désormais une **authentification basée sur des jetons JWT**, adaptée à une interface en ligne de commande (CLI), tout en respectant les bonnes pratiques de sécurité.
+L’application utilise une **authentification basée sur des jetons JWT**, adaptée à une interface en ligne de commande (CLI), tout en respectant les bonnes pratiques de sécurité.
 
 ### Principes généraux
 - Authentification par **email + mot de passe**
@@ -158,7 +158,7 @@ L’application utilise désormais une **authentification basée sur des jetons 
 - Deux types de jetons :
   - **Access token** (courte durée)
   - **Refresh token** (durée plus longue)
-- Les jetons sont stockés **localement** sur la machine de l’utilisateur
+- Les jetons sont stockés **localement** sur la machine de l’utilisateur, de manière sécurisée
 
 ---
 
@@ -174,12 +174,29 @@ L’application utilise désormais une **authentification basée sur des jetons 
   - Permet de régénérer un nouvel access token sans se reconnecter
   - Rotation automatique lors du rafraîchissement
 
-Les tokens sont stockés dans :
-```
-~/.epiccrm/tokens.json
-```
+---
 
-Aucune donnée sensible (mot de passe, informations personnelles) n’est stockée en clair.
+### Stockage sécurisé des tokens (CLI)
+
+Le stockage des tokens suit une stratégie **sécurisée avec repli automatique** :
+
+#### 1. Coffre sécurisé du système (prioritaire)
+Lorsque cela est possible, les tokens sont stockés dans le **coffre sécurisé du système d’exploitation** via la bibliothèque `keyring` :
+- Windows : Credential Manager
+- macOS : Keychain
+- Linux : Secret Service
+
+Dans ce cas :
+- Les tokens **ne sont jamais écrits en clair sur le disque**
+- Le chiffrement est géré par l’OS
+- Les tokens sont accessibles uniquement à l’utilisateur courant
+
+#### 2. Fallback fichier local (si keyring indisponible)
+Si le coffre sécurisé n’est pas disponible, l’application utilise un stockage de secours :
+
+```text
+~/.epiccrm/tokens.json
+
 
 ---
 

@@ -11,11 +11,27 @@ def run_cli(monkeypatch, args: list[str]):
     monkeypatch.setattr("sys.argv", ["epicevents"] + args)
 
 
+def _disable_keyring(monkeypatch) -> None:
+    """
+    Force token_store à utiliser uniquement le fallback fichier.
+    Ça évite que des tokens existent via le keyring du système (flaky en CI).
+    """
+    monkeypatch.setattr(token_store, "keyring", None)
+
+
 def patch_cli_env(monkeypatch, db_session, tmp_path):
     """Configure la DB de test, le secret JWT et le fichier de tokens temporaire."""
     monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
     monkeypatch.setattr("app.epicevents.get_session", lambda: db_session)
+
+    # Important : on neutralise keyring pour que les tests ne dépendent pas du coffre OS
+    _disable_keyring(monkeypatch)
+
+    # On force le fichier de tokens dans un dossier temporaire
     monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
+
+    # Nettoyage défensif (au cas où)
+    token_store.clear_tokens()
 
 
 def create_employee(db_session, *, email: str, password: str, role: Role):
@@ -36,10 +52,16 @@ def create_employee(db_session, *, email: str, password: str, role: Role):
 def seed_tokens_for_employee(tmp_path, monkeypatch, employee_id: int):
     """Écrit un fichier tokens.json valide pour un employee_id donné."""
     monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
+
+    # Important : on neutralise keyring ici aussi
+    _disable_keyring(monkeypatch)
+
     monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
 
     pair = jwt_service.create_token_pair(
-        employee_id=employee_id, access_minutes=20, refresh_days=7
+        employee_id=employee_id,
+        access_minutes=20,
+        refresh_days=7,
     )
     token_store.save_tokens(pair.access_token, pair.refresh_token)
 
@@ -50,7 +72,10 @@ def test_integration_login_success_creates_tokens(
     """login valide crée des tokens persistants."""
     patch_cli_env(monkeypatch, db_session, tmp_path)
     emp = create_employee(
-        db_session, email="ok@example.com", password="Secret123!", role=Role.MANAGEMENT
+        db_session,
+        email="ok@example.com",
+        password="Secret123!",
+        role=Role.MANAGEMENT,
     )
 
     run_cli(monkeypatch, ["login", "ok@example.com", "Secret123!"])
