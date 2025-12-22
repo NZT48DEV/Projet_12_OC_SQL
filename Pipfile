@@ -11,6 +11,7 @@ python-dotenv = "*"
 alembic = "*"
 argon2-cffi = "*"
 pyjwt = "*"
+keyring = "*"
 
 [dev-packages]
 black = "*"

@@ -33,7 +33,14 @@ def seed_tokens(monkeypatch, tmp_path, employee_id: int):
 
 def test_cli_whoami_not_authenticated(monkeypatch, tmp_path, capsys, db_session):
     """whoami affiche un message si aucun token n'est présent."""
+    # 1) Force le mode fallback fichier (keyring désactivé)
+
+    monkeypatch.setattr(token_store, "keyring", None)
+
+    # 2) Tokens fallback dans tmp_path (vide)
     patch_tokens(monkeypatch, tmp_path)
+
+    # 3) Session DB mockée
     patch_sessionlocal(monkeypatch, db_session)
 
     run_cli(monkeypatch, ["whoami"])
