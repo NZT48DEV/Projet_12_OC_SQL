@@ -9,9 +9,13 @@ from app.core import jwt_service
 
 
 @pytest.fixture(autouse=True)
-def _set_jwt_secret(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Définit un secret JWT stable pour garantir des tests déterministes."""
+def _set_jwt_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Définit une configuration JWT stable pour garantir des tests déterministes."""
     monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
+    monkeypatch.setenv("EPICCRM_JWT_ACCESS_MINUTES", "20")
+    monkeypatch.setenv("EPICCRM_JWT_REFRESH_DAYS", "7")
+    monkeypatch.setenv("EPICCRM_JWT_ALG", "HS256")
+    monkeypatch.setenv("EPICCRM_JWT_ROTATE_REFRESH", "true")
 
 
 def _encode(payload: dict) -> str:
@@ -21,9 +25,7 @@ def _encode(payload: dict) -> str:
 
 def test_create_token_pair_creates_valid_access_and_refresh_tokens() -> None:
     """Vérifie que create_token_pair génère un access token et un refresh token valides."""
-    pair = jwt_service.create_token_pair(
-        employee_id=42, access_minutes=20, refresh_days=7
-    )
+    pair = jwt_service.create_token_pair(employee_id=42)
 
     access_payload = jwt_service.decode_and_validate(
         pair.access_token, expected_type="access"
@@ -42,9 +44,7 @@ def test_create_token_pair_creates_valid_access_and_refresh_tokens() -> None:
 
 def test_employee_id_from_access_token_returns_int_id() -> None:
     """Vérifie que employee_id_from_access_token retourne l'identifiant employé en int."""
-    pair = jwt_service.create_token_pair(
-        employee_id=7, access_minutes=20, refresh_days=7
-    )
+    pair = jwt_service.create_token_pair(employee_id=7)
 
     employee_id = jwt_service.employee_id_from_access_token(pair.access_token)
 
@@ -53,9 +53,7 @@ def test_employee_id_from_access_token_returns_int_id() -> None:
 
 def test_decode_and_validate_raises_if_wrong_expected_type() -> None:
     """Vérifie que decode_and_validate refuse un token si son type ne correspond pas au type attendu."""
-    pair = jwt_service.create_token_pair(
-        employee_id=7, access_minutes=20, refresh_days=7
-    )
+    pair = jwt_service.create_token_pair(employee_id=7)
 
     with pytest.raises(jwt_service.TokenError) as excinfo:
         jwt_service.decode_and_validate(pair.refresh_token, expected_type="access")
@@ -65,9 +63,7 @@ def test_decode_and_validate_raises_if_wrong_expected_type() -> None:
 
 def test_employee_id_from_access_token_raises_if_token_is_refresh() -> None:
     """Vérifie que employee_id_from_access_token refuse un refresh token."""
-    pair = jwt_service.create_token_pair(
-        employee_id=7, access_minutes=20, refresh_days=7
-    )
+    pair = jwt_service.create_token_pair(employee_id=7)
 
     with pytest.raises(jwt_service.TokenError) as excinfo:
         jwt_service.employee_id_from_access_token(pair.refresh_token)
@@ -111,13 +107,10 @@ def test_decode_and_validate_raises_if_token_invalid_signature() -> None:
 
 def test_refresh_access_token_without_rotation_keeps_same_refresh_token() -> None:
     """Vérifie que refresh_access_token sans rotation conserve le refresh token d'origine."""
-    pair = jwt_service.create_token_pair(
-        employee_id=123, access_minutes=20, refresh_days=7
-    )
+    pair = jwt_service.create_token_pair(employee_id=123)
 
     new_pair = jwt_service.refresh_access_token(
         refresh_token=pair.refresh_token,
-        access_minutes=20,
         rotate_refresh=False,
     )
 
@@ -127,13 +120,10 @@ def test_refresh_access_token_without_rotation_keeps_same_refresh_token() -> Non
 
 def test_refresh_access_token_with_rotation_returns_valid_tokens() -> None:
     """Vérifie que refresh_access_token avec rotation renvoie une nouvelle paire de tokens valide."""
-    pair = jwt_service.create_token_pair(
-        employee_id=123, access_minutes=20, refresh_days=7
-    )
+    pair = jwt_service.create_token_pair(employee_id=123)
 
     new_pair = jwt_service.refresh_access_token(
         refresh_token=pair.refresh_token,
-        access_minutes=20,
         rotate_refresh=True,
     )
 

@@ -88,11 +88,18 @@ Les informations de connexion à la base de données ne sont **jamais stockées 
 Créer un fichier `.env` à la racine du projet :
 
 ```env
-# Base de développement
+# Base de données (développement / production)
 DATABASE_URL=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
 
-# Base de test (utilisée par pytest)
+# Base de données de test (utilisée par pytest)
 DATABASE_URL_TEST=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm_test
+
+# JWT
+EPICCRM_JWT_SECRET=VOTRE_CLE_SECRETE_JWT
+EPICCRM_JWT_ACCESS_MINUTES=20
+EPICCRM_JWT_REFRESH_DAYS=7
+EPICCRM_JWT_ALG=HS256
+EPICCRM_JWT_ROTATE_REFRESH=true
 ```
 
 - La base **`epic_crm`** est utilisée en développement et en production
