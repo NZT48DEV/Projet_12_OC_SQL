@@ -18,7 +18,8 @@ def test_clients_columns(clients_table: Table):
 
     assert set(cols.keys()) >= {
         "id",
-        "full_name",
+        "first_name",
+        "last_name",
         "email",
         "phone",
         "company_name",
@@ -26,12 +27,14 @@ def test_clients_columns(clients_table: Table):
         "created_at",
     }
 
-    assert cols.full_name.nullable is False
+    assert cols.first_name.nullable is False
+    assert cols.last_name.nullable is False
     assert cols.email.nullable is False
     assert cols.sales_contact_id.nullable is False
     assert cols.created_at.nullable is False
 
-    assert isinstance(cols.full_name.type, String)
+    assert isinstance(cols.first_name.type, String)
+    assert isinstance(cols.last_name.type, String)
     assert isinstance(cols.email.type, String)
     assert isinstance(cols.created_at.type, DateTime)
 
@@ -54,7 +57,8 @@ def test_clients_sales_contact_fk(clients_table: Table):
 def test_client_instance_creation():
     """Vérifie qu'une instance Client se crée avec les champs attendus."""
     client = Client(
-        full_name="ABC Corp",
+        first_name="ABC",
+        last_name="Corp",
         email="contact@abc.test",
         phone="0600000000",
         company_name="ABC",
@@ -62,7 +66,8 @@ def test_client_instance_creation():
         created_at=datetime.now(timezone.utc),
     )
 
-    assert client.full_name == "ABC Corp"
+    assert client.first_name == "ABC"
+    assert client.last_name == "Corp"
     assert client.email == "contact@abc.test"
     assert client.phone == "0600000000"
     assert client.company_name == "ABC"

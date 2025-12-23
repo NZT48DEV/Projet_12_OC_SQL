@@ -15,7 +15,8 @@ def test_client_created_at_is_auto_set(db_session):
     db_session.flush()
 
     client = Client(
-        full_name="Client ABC",
+        first_name="Client",
+        last_name="ABC",
         email="client.abc.created_at@test.com",
         sales_contact_id=employee.id,
     )
