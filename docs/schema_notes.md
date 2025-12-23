@@ -24,3 +24,5 @@
 ## Remarques sécurité (à implémenter côté application)
 - mots de passe stockés uniquement sous forme de hash
 - accès aux données limité selon le rôle (moindre privilège)
+
+---

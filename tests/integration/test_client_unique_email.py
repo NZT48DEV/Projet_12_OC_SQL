@@ -18,13 +18,15 @@ def test_client_email_unique_constraint(db_session):
     db_session.flush()
 
     client1 = Client(
-        full_name="ABC",
+        first_name="Client",
+        last_name="ABC",
         email="contact@abc.test",
         sales_contact_id=employee.id,
     )
 
     client2 = Client(
-        full_name="ABC 2",
+        first_name="Client",
+        last_name="ABC 2",
         email="contact@abc.test",
         sales_contact_id=employee.id,
     )
