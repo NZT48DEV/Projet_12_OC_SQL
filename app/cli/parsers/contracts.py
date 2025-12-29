@@ -6,6 +6,7 @@ from app.cli.commands.contracts import (
     cmd_contracts_create,
     cmd_contracts_list,
     cmd_contracts_sign,
+    cmd_contracts_update,
 )
 
 
@@ -32,3 +33,12 @@ def add_contract_parsers(subparsers: argparse._SubParsersAction) -> None:
     )
     p_contracts_sign.add_argument("contract_id", type=int)
     p_contracts_sign.set_defaults(func=cmd_contracts_sign)
+
+    p_contracts_update = contracts_sub.add_parser(
+        "update",
+        help="Mettre à jour un contrat (SALES/MANAGEMENT)",
+    )
+    p_contracts_update.add_argument("contract_id", type=int)
+    p_contracts_update.add_argument("--total", dest="total_amount", default=None)
+    p_contracts_update.add_argument("--amount-due", dest="amount_due", default=None)
+    p_contracts_update.set_defaults(func=cmd_contracts_update)

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import argparse
 
-from app.cli.commands.clients import cmd_clients_create, cmd_clients_list
+from app.cli.commands.clients import (
+    cmd_clients_create,
+    cmd_clients_list,
+    cmd_clients_update,
+)
 
 
 def add_client_parsers(subparsers: argparse._SubParsersAction) -> None:
@@ -19,3 +23,18 @@ def add_client_parsers(subparsers: argparse._SubParsersAction) -> None:
     p_clients_create.add_argument("--phone", default=None)
     p_clients_create.add_argument("--company-name", dest="company_name", default=None)
     p_clients_create.set_defaults(func=cmd_clients_create)
+
+    p_clients_update = clients_sub.add_parser(
+        "update",
+        help="Mettre à jour un client",
+    )
+
+    p_clients_update.add_argument("client_id", type=int)
+
+    p_clients_update.add_argument("--first-name")
+    p_clients_update.add_argument("--last-name")
+    p_clients_update.add_argument("--email")
+    p_clients_update.add_argument("--phone")
+    p_clients_update.add_argument("--company-name", dest="company_name")
+
+    p_clients_update.set_defaults(func=cmd_clients_update)

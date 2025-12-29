@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import argparse
 
-from app.cli.commands.events import cmd_events_create, cmd_events_list
+from app.cli.commands.events import (
+    cmd_events_create,
+    cmd_events_list,
+    cmd_events_update,
+)
 
 
 def add_event_parsers(subparsers: argparse._SubParsersAction) -> None:
@@ -29,3 +33,22 @@ def add_event_parsers(subparsers: argparse._SubParsersAction) -> None:
     p_events_create.add_argument("--notes", default=None)
 
     p_events_create.set_defaults(func=cmd_events_create)
+
+    p_events_update = events_sub.add_parser(
+        "update",
+        help="Mettre à jour un événement (SUPPORT sur ses événements / MANAGEMENT)",
+    )
+    p_events_update.add_argument("event_id", type=int)
+
+    # dates/heures optionnelles (même format que create)
+    p_events_update.add_argument("--start-date", default=None, help="YYYY-MM-DD")
+    p_events_update.add_argument("--start-time", default=None, help="HH:MM")
+    p_events_update.add_argument("--end-date", default=None, help="YYYY-MM-DD")
+    p_events_update.add_argument("--end-time", default=None, help="HH:MM")
+
+    p_events_update.add_argument("--location", default=None)
+    p_events_update.add_argument("--attendees", type=int, default=None)
+    p_events_update.add_argument("--notes", default=None)
+    p_events_update.add_argument("--support-contact-id", type=int, default=None)
+
+    p_events_update.set_defaults(func=cmd_events_update)

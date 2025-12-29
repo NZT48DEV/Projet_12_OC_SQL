@@ -13,6 +13,7 @@ from app.services.contract_service import (
     create_contract,
     list_contracts,
     sign_contract,
+    update_contract,
 )
 from app.services.current_employee import NotAuthenticatedError, get_current_employee
 
@@ -105,3 +106,43 @@ def cmd_contracts_sign(args: argparse.Namespace) -> None:
         print(f"❌ {e}")
     except ValidationError as e:
         print(f"⚠️ {e}")
+
+
+def cmd_contracts_update(args: argparse.Namespace) -> None:
+    session = get_session()
+    try:
+        employee = get_current_employee(session)
+
+        total_amount = (
+            Decimal(args.total_amount) if args.total_amount is not None else None
+        )
+        amount_due = Decimal(args.amount_due) if args.amount_due is not None else None
+
+        contract = update_contract(
+            session=session,
+            current_employee=employee,
+            contract_id=args.contract_id,
+            total_amount=total_amount,
+            amount_due=amount_due,
+        )
+
+        print(
+            "Contrat mis à jour : "
+            f"id={contract.id} | client_id={contract.client_id} | "
+            f"total={contract.total_amount} | amount_due={contract.amount_due} | "
+            f"signed={contract.is_signed} | sales_contact_id={contract.sales_contact_id}"
+        )
+
+    except NotAuthenticatedError as exc:
+        print(f"Erreur : {exc}")
+    except PermissionDeniedError as exc:
+        print(f"Accès refusé : {exc}")
+    except NotFoundError as exc:
+        print(f"Erreur : {exc}")
+    except ValidationError as exc:
+        print(f"Données invalides : {exc}")
+    except Exception as exc:
+        session.rollback()
+        print(f"Erreur lors de la mise à jour du contrat : {exc}")
+    finally:
+        session.close()
