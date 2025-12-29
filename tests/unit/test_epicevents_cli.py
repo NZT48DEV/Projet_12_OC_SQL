@@ -6,42 +6,59 @@ from app.epicevents import main
 from app.models.employee import Employee, Role
 
 
-def run_cli(monkeypatch, args: list[str]):
+def run_cli(monkeypatch, args: list[str]) -> None:
     """Simule sys.argv pour exécuter une commande CLI."""
     monkeypatch.setattr("sys.argv", ["epicevents"] + args)
 
 
-def patch_sessionlocal(monkeypatch, db_session):
-    """Force epicevents.SessionLocal() à renvoyer la session de test."""
-    monkeypatch.setattr("app.epicevents.get_session", lambda: db_session)
+def patch_sessions(monkeypatch, db_session) -> None:
+    """
+    Force les modules de commandes CLI à utiliser la session de test.
+    IMPORTANT: après refactor, get_session est importé directement dans chaque module
+    (from app.db.session import get_session), donc il faut patcher ces modules-là.
+    """
+    monkeypatch.setattr("app.cli.commands.auth.get_session", lambda: db_session)
+    monkeypatch.setattr("app.cli.commands.employees.get_session", lambda: db_session)
+    # Autres tests pour plus tard :
+    # monkeypatch.setattr("app.cli.commands.clients.get_session", lambda: db_session)
+    # monkeypatch.setattr("app.cli.commands.contracts.get_session", lambda: db_session)
+    # monkeypatch.setattr("app.cli.commands.events.get_session", lambda: db_session)
 
 
-def patch_tokens(monkeypatch, tmp_path):
+def patch_init_db(monkeypatch) -> None:
+    """Désactive init_db() pendant les tests CLI pour éviter les effets de bord."""
+    monkeypatch.setattr("app.epicevents.init_db", lambda: None)
+
+
+def patch_tokens(monkeypatch, tmp_path) -> None:
     """Force le fichier tokens.json à être stocké dans un répertoire temporaire."""
     monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
     monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
 
 
-def seed_tokens(monkeypatch, tmp_path, employee_id: int):
+def seed_tokens(monkeypatch, tmp_path, employee_id: int) -> None:
     """Écrit un fichier tokens.json valide pour un employee_id donné."""
     patch_tokens(monkeypatch, tmp_path)
     pair = jwt_service.create_token_pair(
-        employee_id=employee_id, access_minutes=20, refresh_days=7
+        employee_id=employee_id,
+        access_minutes=20,
+        refresh_days=7,
     )
     token_store.save_tokens(pair.access_token, pair.refresh_token)
 
 
 def test_cli_whoami_not_authenticated(monkeypatch, tmp_path, capsys, db_session):
     """whoami affiche un message si aucun token n'est présent."""
-    # 1) Force le mode fallback fichier (keyring désactivé)
+    patch_init_db(monkeypatch)
 
+    # 1) Force le mode fallback fichier (keyring désactivé)
     monkeypatch.setattr(token_store, "keyring", None)
 
     # 2) Tokens fallback dans tmp_path (vide)
     patch_tokens(monkeypatch, tmp_path)
 
     # 3) Session DB mockée
-    patch_sessionlocal(monkeypatch, db_session)
+    patch_sessions(monkeypatch, db_session)
 
     run_cli(monkeypatch, ["whoami"])
     main()
@@ -52,8 +69,9 @@ def test_cli_whoami_not_authenticated(monkeypatch, tmp_path, capsys, db_session)
 
 def test_cli_login_success_saves_tokens(monkeypatch, tmp_path, capsys, db_session):
     """login sauvegarde des tokens locaux quand les identifiants sont valides."""
+    patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
-    patch_sessionlocal(monkeypatch, db_session)
+    patch_sessions(monkeypatch, db_session)
 
     emp = Employee(
         first_name="Anthony",
@@ -77,8 +95,9 @@ def test_cli_login_success_saves_tokens(monkeypatch, tmp_path, capsys, db_sessio
 
 def test_cli_whoami_with_valid_tokens(monkeypatch, tmp_path, capsys, db_session):
     """whoami affiche l'utilisateur si les tokens sont valides."""
+    patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
-    patch_sessionlocal(monkeypatch, db_session)
+    patch_sessions(monkeypatch, db_session)
 
     emp = Employee(
         first_name="Anthony",
@@ -103,8 +122,9 @@ def test_cli_whoami_with_valid_tokens(monkeypatch, tmp_path, capsys, db_session)
 
 def test_cli_whoami_employee_missing(monkeypatch, tmp_path, capsys, db_session):
     """whoami échoue si le token est valide mais l'employé est absent en base."""
+    patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
-    patch_sessionlocal(monkeypatch, db_session)
+    patch_sessions(monkeypatch, db_session)
 
     seed_tokens(monkeypatch, tmp_path, employee_id=999999999)
 
@@ -117,6 +137,7 @@ def test_cli_whoami_employee_missing(monkeypatch, tmp_path, capsys, db_session):
 
 def test_cli_logout_clears_tokens(monkeypatch, tmp_path, capsys):
     """logout supprime les tokens locaux."""
+    patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
 
     # On seed un fichier tokens.json
@@ -136,8 +157,9 @@ def test_cli_management_only_not_authenticated(
     monkeypatch, tmp_path, capsys, db_session
 ):
     """management-only refuse si l'utilisateur n'est pas authentifié."""
+    patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
-    patch_sessionlocal(monkeypatch, db_session)
+    patch_sessions(monkeypatch, db_session)
 
     run_cli(monkeypatch, ["management-only"])
     main()
@@ -150,8 +172,9 @@ def test_cli_management_only_allowed_for_management(
     monkeypatch, tmp_path, capsys, db_session
 ):
     """management-only autorise un utilisateur MANAGEMENT."""
+    patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
-    patch_sessionlocal(monkeypatch, db_session)
+    patch_sessions(monkeypatch, db_session)
 
     emp = Employee(
         first_name="Boss",
@@ -177,8 +200,9 @@ def test_cli_management_only_denied_for_support(
     monkeypatch, tmp_path, capsys, db_session
 ):
     """management-only refuse un utilisateur SUPPORT."""
+    patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
-    patch_sessionlocal(monkeypatch, db_session)
+    patch_sessions(monkeypatch, db_session)
 
     emp = Employee(
         first_name="Bob",
