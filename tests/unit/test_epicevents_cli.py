@@ -19,10 +19,9 @@ def patch_sessions(monkeypatch, db_session) -> None:
     """
     monkeypatch.setattr("app.cli.commands.auth.get_session", lambda: db_session)
     monkeypatch.setattr("app.cli.commands.employees.get_session", lambda: db_session)
-    # Autres tests pour plus tard :
-    # monkeypatch.setattr("app.cli.commands.clients.get_session", lambda: db_session)
-    # monkeypatch.setattr("app.cli.commands.contracts.get_session", lambda: db_session)
-    # monkeypatch.setattr("app.cli.commands.events.get_session", lambda: db_session)
+    monkeypatch.setattr("app.cli.commands.clients.get_session", lambda: db_session)
+    monkeypatch.setattr("app.cli.commands.contracts.get_session", lambda: db_session)
+    monkeypatch.setattr("app.cli.commands.events.get_session", lambda: db_session)
 
 
 def patch_init_db(monkeypatch) -> None:
