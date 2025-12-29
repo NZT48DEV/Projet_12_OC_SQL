@@ -13,3 +13,12 @@ class ContractRepository:
     def list_all(self) -> list[Contract]:
         stmt = select(Contract).order_by(Contract.id)
         return list(self.session.scalars(stmt).all())
+
+    def add(self, contract: Contract) -> Contract:
+        self.session.add(contract)
+        self.session.flush()
+        return contract
+
+    def get_by_id(self, contract_id: int) -> Contract | None:
+        stmt = select(Contract).where(Contract.id == contract_id)
+        return self.session.scalars(stmt).first()
