@@ -6,7 +6,7 @@ from app.epicevents import main
 from app.models.employee import Employee, Role
 
 
-def run_cli(monkeypatch, args: list[str]):
+def run_cli(monkeypatch, args: list[str]) -> None:
     """Simule l'appel CLI en patchant sys.argv."""
     monkeypatch.setattr("sys.argv", ["epicevents"] + args)
 
@@ -19,10 +19,21 @@ def _disable_keyring(monkeypatch) -> None:
     monkeypatch.setattr(token_store, "keyring", None)
 
 
-def patch_cli_env(monkeypatch, db_session, tmp_path):
+def _disable_init_db(monkeypatch) -> None:
+    """Évite les effets de bord (création/connexion DB hors fixture) lors de main()."""
+    monkeypatch.setattr("app.epicevents.init_db", lambda: None)
+
+
+def patch_cli_env(monkeypatch, db_session, tmp_path) -> None:
     """Configure la DB de test, le secret JWT et le fichier de tokens temporaire."""
     monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
-    monkeypatch.setattr("app.epicevents.get_session", lambda: db_session)
+
+    # main() appelle init_db() -> on le neutralise pour rester sur la DB de fixture
+    _disable_init_db(monkeypatch)
+
+    # IMPORTANT: après refactor CLI, get_session est importé dans chaque module de commande
+    monkeypatch.setattr("app.cli.commands.auth.get_session", lambda: db_session)
+    monkeypatch.setattr("app.cli.commands.employees.get_session", lambda: db_session)
 
     # Important : on neutralise keyring pour que les tests ne dépendent pas du coffre OS
     _disable_keyring(monkeypatch)
@@ -34,7 +45,7 @@ def patch_cli_env(monkeypatch, db_session, tmp_path):
     token_store.clear_tokens()
 
 
-def create_employee(db_session, *, email: str, password: str, role: Role):
+def create_employee(db_session, *, email: str, password: str, role: Role) -> Employee:
     """Crée et persiste un employé de test en base."""
     emp = Employee(
         first_name="Test",
@@ -49,11 +60,10 @@ def create_employee(db_session, *, email: str, password: str, role: Role):
     return emp
 
 
-def seed_tokens_for_employee(tmp_path, monkeypatch, employee_id: int):
+def seed_tokens_for_employee(tmp_path, monkeypatch, employee_id: int) -> None:
     """Écrit un fichier tokens.json valide pour un employee_id donné."""
     monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
 
-    # Important : on neutralise keyring ici aussi
     _disable_keyring(monkeypatch)
 
     monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
