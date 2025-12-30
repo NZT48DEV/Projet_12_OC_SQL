@@ -4,7 +4,10 @@ import argparse
 
 from app.cli.commands.employees import (
     cmd_create_employee,
+    cmd_employees_deactivate,
+    cmd_employees_delete,
     cmd_employees_list,
+    cmd_employees_reactivate,
     cmd_management_only,
 )
 from app.models.employee import Role
@@ -41,6 +44,7 @@ def add_employee_group_parsers(subparsers: argparse._SubParsersAction) -> None:
         required=True,
     )
 
+    # list
     p_list = employees_sub.add_parser(
         "list",
         help="Lister les employés",
@@ -52,3 +56,37 @@ def add_employee_group_parsers(subparsers: argparse._SubParsersAction) -> None:
         help="Filtrer par rôle",
     )
     p_list.set_defaults(func=cmd_employees_list)
+
+    # deactivate (soft delete explicite)
+    p_deactivate = employees_sub.add_parser(
+        "deactivate",
+        help="Désactiver un employé (MANAGEMENT)",
+    )
+    p_deactivate.add_argument("employee_id", type=int)
+    p_deactivate.set_defaults(func=cmd_employees_deactivate)
+
+    # reactivate
+    p_reactivate = employees_sub.add_parser(
+        "reactivate",
+        help="Réactiver un employé désactivé (MANAGEMENT)",
+    )
+    p_reactivate.add_argument("employee_id", type=int)
+    p_reactivate.set_defaults(func=cmd_employees_reactivate)
+
+    # delete (soft par défaut / hard avec options)
+    p_delete = employees_sub.add_parser(
+        "delete",
+        help="Supprimer un employé (soft delete par défaut, hard delete avec --hard)",
+    )
+    p_delete.add_argument("employee_id", type=int)
+    p_delete.add_argument(
+        "--hard",
+        action="store_true",
+        help="Suppression définitive (dangereux)",
+    )
+    p_delete.add_argument(
+        "--confirm",
+        type=int,
+        help="Confirmer l'ID pour hard delete",
+    )
+    p_delete.set_defaults(func=cmd_employees_delete)
