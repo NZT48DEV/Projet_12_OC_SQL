@@ -28,7 +28,16 @@
 #### Clients
 - ✔️ Lecture sécurisée des clients (`clients list`)
 - ✔️ Création de clients (`clients create`)
-- ✔️ Accès contrôlé par rôle (`SALES` / `MANAGEMENT`)
+- ✔️ Mise à jour des clients (`clients update`)
+- ✔️ Règles d’accès :
+  - `SUPPORT` : accès interdit
+  - `SALES` : modification limitée à ses propres clients
+  - `MANAGEMENT` : modification de tous les clients
+- ✔️ Contraintes métier :
+  - email unique
+  - champs obligatoires non vides
+
+---
 
 #### Contrats
 - ✔️ Lecture sécurisée des contrats (`contracts list`)
@@ -36,25 +45,41 @@
   - autorisée pour les rôles `SALES` et `MANAGEMENT`
 - ✔️ Signature des contrats (`contracts sign`)
   - autorisée **uniquement** pour le rôle `MANAGEMENT`
+- ✔️ Mise à jour des contrats (`contracts update`)
+  - autorisée pour `SALES` (périmètre restreint) et `MANAGEMENT`
 - ✔️ Règles métier validées :
-  - montants cohérents
-  - client existant
-  - impossibilité de signer deux fois le même contrat
+  - montants strictement positifs
+  - cohérence `amount_due ≤ total_amount`
+  - impossibilité de modifier la signature via update
+
+---
 
 #### Événements
 - ✔️ Lecture sécurisée des événements (`events list`)
-- ✔️ Accès conditionné à une authentification valide (JWT)
-- ✔️ Aucune modification possible via les commandes de lecture
+- ✔️ Création d’événements (`events create`)
+  - autorisée pour `SALES`
+  - contrat signé requis
+- ✔️ Mise à jour des événements (`events update`)
+  - `SUPPORT` : uniquement les événements assignés
+  - `MANAGEMENT` : tous les événements + assignation support
+  - `SALES` : accès interdit
+- ✔️ Règles métier validées :
+  - cohérence des dates (start < end)
+  - participants ≥ 0
+  - lieu obligatoire
 
 ---
 
 ### Qualité & intégration continue
-- ✔️ Tests unitaires et tests d’intégration automatisés (**pytest + PostgreSQL**)
+- ✔️ Tests unitaires complets sur la couche **services** (CRUD)
+- ✔️ Tests unitaires sur la couche **CLI** (commandes isolées)
+- ✔️ Tests d’intégration CLI (`main`, argparse, JWT, DB)
+- ✔️ Tests d’intégration DB (contraintes SQL : NOT NULL, UNIQUE, FK, ENUM)
 - ✔️ Pipeline **CI GitHub Actions** fonctionnel :
   - linting (pre-commit)
-  - exécution des tests
+  - exécution des tests unitaires et d’intégration
   - base PostgreSQL éphémère pour l’intégration
-- ✔️ Architecture respectant la séparation :
+- ✔️ Architecture respectant strictement la séparation :
   - CLI (interface)
   - Services (règles métier)
   - Repositories (accès aux données)
@@ -62,8 +87,5 @@
 ---
 
 👉 **Prochaines étapes prévues**
-- Implémentation des fonctionnalités **UPDATE / DELETE**
-  sur les entités métier (**clients**, **contrats**, **événements**)
-- Renforcement des règles métier sur les événements
-  (ex : création uniquement si contrat signé)
-- Ajout de tests d’intégration couvrant les scénarios d’autorisation par rôle
+  - Implémentation des fonctionnalités **DELETE** sur les entités métier
+  - Intégration de **Sentry** pour le monitoring et le suivi d’erreurs

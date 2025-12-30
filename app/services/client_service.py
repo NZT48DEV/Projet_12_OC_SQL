@@ -73,3 +73,62 @@ def create_client(
         raise ClientAlreadyExistsError("Un client avec cet email existe déjà.") from exc
 
     return client
+
+
+def update_client(
+    session: Session,
+    current_employee: Employee,
+    *,
+    client_id: int,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
+    company_name: str | None = None,
+) -> Client:
+    repo = ClientRepository(session)
+    client = repo.get_by_id(client_id)
+
+    if client is None:
+        raise ValidationError("Client introuvable.")
+
+    if current_employee.role == Role.SUPPORT:
+        raise PermissionDeniedError("Accès interdit.")
+
+    if (
+        current_employee.role == Role.SALES
+        and client.sales_contact_id != current_employee.id
+    ):
+        raise PermissionDeniedError(
+            "Un commercial ne peut modifier que ses propres clients."
+        )
+
+    if first_name is not None:
+        first_name = first_name.strip()
+        if not first_name:
+            raise ValidationError("Le prénom ne peut pas être vide.")
+        client.first_name = first_name
+
+    if last_name is not None:
+        last_name = last_name.strip()
+        if not last_name:
+            raise ValidationError("Le nom ne peut pas être vide.")
+        client.last_name = last_name
+
+    if email is not None:
+        email = email.strip().lower()
+        if not email:
+            raise ValidationError("L'email ne peut pas être vide.")
+        existing = repo.get_by_email(email)
+        if existing and existing.id != client.id:
+            raise ClientAlreadyExistsError("Un client avec cet email existe déjà.")
+        client.email = email
+
+    if phone is not None:
+        client.phone = phone.strip() or None
+
+    if company_name is not None:
+        client.company_name = company_name.strip() or None
+
+    session.commit()
+    return client

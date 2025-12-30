@@ -8,6 +8,7 @@ from app.models.employee import Employee, Role
 from app.models.event import Event
 from app.repositories.client_repository import ClientRepository
 from app.repositories.contract_repository import ContractRepository
+from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.event_repository import EventRepository
 
 
@@ -99,4 +100,92 @@ def create_event(
     repo.add(event)
     session.commit()
 
+    return event
+
+
+def update_event(
+    session: Session,
+    current_employee: Employee,
+    *,
+    event_id: int,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    location: str | None = None,
+    attendees: int | None = None,
+    notes: str | None = None,
+    support_contact_id: int | None = None,
+) -> Event:
+    """
+    UPDATE Event
+
+    Règles métier :
+    - MANAGEMENT : peut modifier tous les événements
+    - SUPPORT : peut modifier uniquement les événements qui lui sont assignés
+    - SALES : interdit
+    - start_date < end_date
+    - attendees >= 0
+    - location non vide si fourni
+    - assignation support : MANAGEMENT uniquement
+      - l'employé assigné doit exister
+      - l'employé assigné doit être ROLE.SUPPORT
+    """
+    if current_employee.role == Role.SALES:
+        raise PermissionDeniedError(
+            "Les commerciaux ne peuvent pas modifier un événement."
+        )
+
+    repo = EventRepository(session)
+    event = repo.get_by_id(event_id)
+    if event is None:
+        raise NotFoundError("Événement introuvable.")
+
+    if current_employee.role == Role.SUPPORT:
+        if event.support_contact_id != current_employee.id:
+            raise PermissionDeniedError(
+                "Vous ne pouvez modifier que les événements qui vous sont assignés."
+            )
+
+    # Validations + valeurs finales
+    final_start = start_date if start_date is not None else event.start_date
+    final_end = end_date if end_date is not None else event.end_date
+
+    if final_start >= final_end:
+        raise ValidationError("La date de début doit être antérieure à la date de fin.")
+
+    if attendees is not None and attendees < 0:
+        raise ValidationError("Le nombre de participants ne peut pas être négatif.")
+
+    if location is not None and not location.strip():
+        raise ValidationError("Le lieu est requis.")
+
+    # Application des modifications
+    if start_date is not None:
+        event.start_date = start_date
+    if end_date is not None:
+        event.end_date = end_date
+    if location is not None:
+        event.location = location.strip()
+    if attendees is not None:
+        event.attendees = attendees
+    if notes is not None:
+        event.notes = notes.strip() or None
+
+    # Assignation support (optionnelle)
+    # - MANAGEMENT peut assigner/changer
+    # - SUPPORT ne peut pas (on évite l'auto-assign ou le vol d'événement)
+    if support_contact_id is not None:
+        if current_employee.role != Role.MANAGEMENT:
+            raise PermissionDeniedError("Seul le management peut assigner un support.")
+
+        emp_repo = EmployeeRepository(session)
+        support = emp_repo.get_by_id(support_contact_id)
+        if support is None:
+            raise NotFoundError("Employé introuvable.")
+
+        if support.role != Role.SUPPORT:
+            raise ValidationError("L'employé assigné doit avoir le rôle SUPPORT.")
+
+        event.support_contact_id = support_contact_id
+
+    session.commit()
     return event
