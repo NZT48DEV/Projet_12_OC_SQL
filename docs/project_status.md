@@ -20,72 +20,54 @@
   - `SALES`
   - `SUPPORT`
 - ✔️ Mécanisme de **bootstrap sécurisé** pour le premier compte MANAGEMENT
+- ✔️ Désactivation d’employé via **soft delete** (`is_active = false`)
 
 ---
 
 ### Fonctionnalités métier implémentées
 
-#### Clients
-- ✔️ Lecture sécurisée des clients (`clients list`)
-- ✔️ Création de clients (`clients create`)
-- ✔️ Mise à jour des clients (`clients update`)
-- ✔️ Règles d’accès :
-  - `SUPPORT` : accès interdit
-  - `SALES` : modification limitée à ses propres clients
-  - `MANAGEMENT` : modification de tous les clients
-- ✔️ Contraintes métier :
-  - email unique
-  - champs obligatoires non vides
+#### Employés
+- ✔️ Création d’employés
+- ✔️ Lecture sécurisée
+- ✔️ Désactivation / réactivation (soft delete)
+- ✔️ Suppression contrôlée (refus si références)
+- ✔️ Suppression définitive (**hard delete**) sécurisée
 
----
+#### Clients
+- ✔️ CRUD complet
+- ✔️ Réassignation client (cascade contrats)
+- ✔️ Règles d’accès strictes par rôle
 
 #### Contrats
-- ✔️ Lecture sécurisée des contrats (`contracts list`)
-- ✔️ Création de contrats (`contracts create`)
-  - autorisée pour les rôles `SALES` et `MANAGEMENT`
-- ✔️ Signature des contrats (`contracts sign`)
-  - autorisée **uniquement** pour le rôle `MANAGEMENT`
-- ✔️ Mise à jour des contrats (`contracts update`)
-  - autorisée pour `SALES` (périmètre restreint) et `MANAGEMENT`
-- ✔️ Règles métier validées :
-  - montants strictement positifs
-  - cohérence `amount_due ≤ total_amount`
-  - impossibilité de modifier la signature via update
-
----
+- ✔️ CRUD + signature
+- ✔️ Réassignation contrat
+- ✔️ Validations métier complètes
 
 #### Événements
-- ✔️ Lecture sécurisée des événements (`events list`)
-- ✔️ Création d’événements (`events create`)
-  - autorisée pour `SALES`
-  - contrat signé requis
-- ✔️ Mise à jour des événements (`events update`)
-  - `SUPPORT` : uniquement les événements assignés
-  - `MANAGEMENT` : tous les événements + assignation support
-  - `SALES` : accès interdit
-- ✔️ Règles métier validées :
-  - cohérence des dates (start < end)
-  - participants ≥ 0
-  - lieu obligatoire
+- ✔️ CRUD complet
+- ✔️ Réassignation du support
+- ✔️ Règles d’accès et validations métier
 
 ---
 
-### Qualité & intégration continue
-- ✔️ Tests unitaires complets sur la couche **services** (CRUD)
-- ✔️ Tests unitaires sur la couche **CLI** (commandes isolées)
-- ✔️ Tests d’intégration CLI (`main`, argparse, JWT, DB)
-- ✔️ Tests d’intégration DB (contraintes SQL : NOT NULL, UNIQUE, FK, ENUM)
-- ✔️ Pipeline **CI GitHub Actions** fonctionnel :
-  - linting (pre-commit)
-  - exécution des tests unitaires et d’intégration
-  - base PostgreSQL éphémère pour l’intégration
-- ✔️ Architecture respectant strictement la séparation :
-  - CLI (interface)
-  - Services (règles métier)
-  - Repositories (accès aux données)
+### Qualité, tests & CI
+- ✔️ Tests unitaires services (clients / contrats / events)
+- ✔️ Tests CLI
+- ✔️ Tests d’intégration DB
+- ✔️ CI GitHub Actions fonctionnelle
 
 ---
 
-👉 **Prochaines étapes prévues**
-  - Implémentation des fonctionnalités **DELETE** sur les entités métier
-  - Intégration de **Sentry** pour le monitoring et le suivi d’erreurs
+### Observabilité & monitoring
+
+#### Sentry (prochaine étape)
+- Intégration de **Sentry** pour le suivi des erreurs runtime
+- Capture automatique des exceptions non gérées (CLI & services)
+- Enrichissement du contexte :
+  - utilisateur connecté
+  - rôle
+  - commande CLI exécutée
+- Séparation des environnements (dev / test / prod)
+- Désactivation automatique en environnement de test
+
+👉 **Prochaine étape planifiée : intégration de Sentry pour améliorer l’observabilité et la robustesse du projet.**

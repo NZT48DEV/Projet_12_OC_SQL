@@ -11,6 +11,7 @@ from app.services.event_service import (
     ValidationError,
     create_event,
     list_events,
+    reassign_event,
     update_event,
 )
 
@@ -151,5 +152,35 @@ def cmd_events_update(args: argparse.Namespace) -> None:
     except Exception as exc:
         session.rollback()
         print(f"❌ Erreur lors de la mise à jour de l'événement : {exc}")
+    finally:
+        session.close()
+
+
+def cmd_events_reassign(args: argparse.Namespace) -> None:
+    session = get_session()
+    try:
+        employee = get_current_employee(session)
+
+        event = reassign_event(
+            session=session,
+            current_employee=employee,
+            event_id=args.event_id,
+            support_contact_id=args.support_contact_id,
+        )
+
+        print(
+            "✅ Événement réassigné : "
+            f"id={event.id} | support_contact_id={event.support_contact_id}"
+        )
+
+    except NotAuthenticatedError as exc:
+        print(f"❌ {exc}")
+    except PermissionDeniedError as exc:
+        print(f"⛔ {exc}")
+    except (ValidationError, NotFoundError) as exc:
+        print(f"❌ {exc}")
+    except Exception as exc:
+        session.rollback()
+        print(f"❌ Erreur lors de la réassignation de l'événement : {exc}")
     finally:
         session.close()

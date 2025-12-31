@@ -5,10 +5,12 @@ import argparse
 from app.db.session import get_session
 from app.services.client_service import (
     ClientAlreadyExistsError,
+    NotFoundError,
     PermissionDeniedError,
     ValidationError,
     create_client,
     list_clients,
+    reassign_client,
     update_client,
 )
 from app.services.current_employee import NotAuthenticatedError, get_current_employee
@@ -33,9 +35,6 @@ def cmd_clients_list(_: argparse.Namespace) -> None:
 
     except NotAuthenticatedError as exc:
         print(f"❌ {exc}")
-    except Exception as exc:
-        session.rollback()
-        print(f"❌ Erreur lors de la récupération des clients : {exc}")
     finally:
         session.close()
 
@@ -109,5 +108,35 @@ def cmd_clients_update(args: argparse.Namespace) -> None:
     except Exception as exc:
         session.rollback()
         print(f"Erreur lors de la mise à jour du client : {exc}")
+    finally:
+        session.close()
+
+
+def cmd_clients_reassign(args: argparse.Namespace) -> None:
+    session = get_session()
+    try:
+        employee = get_current_employee(session)
+
+        client = reassign_client(
+            session=session,
+            current_employee=employee,
+            client_id=args.client_id,
+            new_sales_contact_id=args.sales_contact_id,
+        )
+
+        print(
+            "✅ Client réassigné : "
+            f"id={client.id} | sales_contact_id={client.sales_contact_id}"
+        )
+
+    except NotAuthenticatedError as exc:
+        print(f"❌ {exc}")
+    except PermissionDeniedError as exc:
+        print(f"⛔ Accès refusé : {exc}")
+    except (ValidationError, NotFoundError) as exc:
+        print(f"❌ {exc}")
+    except Exception as exc:
+        session.rollback()
+        print(f"❌ Erreur lors de la réassignation du client : {exc}")
     finally:
         session.close()

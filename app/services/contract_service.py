@@ -8,6 +8,7 @@ from app.models.contract import Contract
 from app.models.employee import Employee, Role
 from app.repositories.client_repository import ClientRepository
 from app.repositories.contract_repository import ContractRepository
+from app.repositories.employee_repository import EmployeeRepository
 
 
 class PermissionDeniedError(Exception):
@@ -165,5 +166,53 @@ def update_contract(
     if amount_due is not None:
         contract.amount_due = amount_due
 
+    session.commit()
+    return contract
+
+
+def reassign_contract(
+    session: Session,
+    current_employee: Employee,
+    *,
+    contract_id: int,
+    new_sales_contact_id: int,
+) -> Contract:
+    """
+    Réassigne un contrat à un autre commercial.
+
+    Règles métier :
+    - MANAGEMENT : peut réassigner n'importe quel contrat
+    - SALES : peut réassigner uniquement SES contrats (sales_contact_id == current_employee.id)
+    - SUPPORT : interdit
+    - Le nouvel employé doit exister, être ROLE.SALES et être actif
+    """
+    if current_employee.role not in {Role.SALES, Role.MANAGEMENT}:
+        raise PermissionDeniedError(
+            "Seuls les commerciaux et les managers peuvent réassigner un contrat."
+        )
+
+    repo = ContractRepository(session)
+    contract = repo.get_by_id(contract_id)
+    if contract is None:
+        raise NotFoundError("Contrat introuvable.")
+
+    if (
+        current_employee.role == Role.SALES
+        and contract.sales_contact_id != current_employee.id
+    ):
+        raise PermissionDeniedError(
+            "Un commercial ne peut réassigner que ses propres contrats."
+        )
+
+    emp_repo = EmployeeRepository(session)
+    new_sales = emp_repo.get_by_id(new_sales_contact_id)
+    if new_sales is None:
+        raise NotFoundError("Employé introuvable.")
+    if new_sales.role != Role.SALES:
+        raise ValidationError("L'employé assigné doit avoir le rôle SALES.")
+    if not new_sales.is_active:
+        raise ValidationError("Impossible d'assigner un employé désactivé.")
+
+    contract.sales_contact_id = new_sales_contact_id
     session.commit()
     return contract

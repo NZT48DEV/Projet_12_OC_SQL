@@ -56,6 +56,7 @@
 │       ├── client_service.py
 │       ├── contract_service.py
 │       ├── current_employee.py
+│       ├── employee_service.py
 │       └── event_service.py
 ├── docs/
 │   ├── architecture.md            # Structure du projet + responsabilités

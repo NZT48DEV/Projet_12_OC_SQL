@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.client import Client
+from app.models.contract import Contract
 from app.models.employee import Employee, Role
 from app.repositories.client_repository import ClientRepository
+from app.repositories.employee_repository import EmployeeRepository
 
 
 class PermissionDeniedError(Exception):
@@ -14,6 +17,10 @@ class PermissionDeniedError(Exception):
 
 class ValidationError(Exception):
     """Données invalides côté métier."""
+
+
+class NotFoundError(Exception):
+    """Ressource introuvable."""
 
 
 class ClientAlreadyExistsError(Exception):
@@ -129,6 +136,52 @@ def update_client(
 
     if company_name is not None:
         client.company_name = company_name.strip() or None
+
+    session.commit()
+    return client
+
+
+def reassign_client(
+    session: Session,
+    current_employee: Employee,
+    *,
+    client_id: int,
+    new_sales_contact_id: int,
+) -> Client:
+    """
+    Réassigne un client à un autre commercial.
+
+    Règles :
+    - MANAGEMENT uniquement
+    - le nouvel employé doit exister, être SALES, et être actif
+    - met aussi à jour tous les contrats du client (cohérence)
+    """
+    if current_employee.role != Role.MANAGEMENT:
+        raise PermissionDeniedError("Seul MANAGEMENT peut réassigner un client.")
+
+    client_repo = ClientRepository(session)
+    employee_repo = EmployeeRepository(session)
+
+    client = client_repo.get_by_id(client_id)
+    if client is None:
+        raise NotFoundError("Client introuvable.")
+
+    new_sales = employee_repo.get_by_id(new_sales_contact_id)
+    if new_sales is None:
+        raise NotFoundError("Employé cible introuvable.")
+    if new_sales.role != Role.SALES:
+        raise ValidationError("L'employé cible doit avoir le rôle SALES.")
+    if not new_sales.is_active:
+        raise ValidationError("Impossible d'assigner un employé désactivé.")
+
+    # 1) update client
+    client.sales_contact_id = new_sales_contact_id
+
+    # 2) update contrats liés (pas de relationship dans le modèle)
+    stmt = select(Contract).where(Contract.client_id == client.id)
+    contracts = list(session.scalars(stmt).all())
+    for contract in contracts:
+        contract.sales_contact_id = new_sales_contact_id
 
     session.commit()
     return client
