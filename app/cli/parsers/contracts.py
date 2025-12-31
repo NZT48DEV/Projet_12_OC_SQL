@@ -5,6 +5,7 @@ import argparse
 from app.cli.commands.contracts import (
     cmd_contracts_create,
     cmd_contracts_list,
+    cmd_contracts_reassign,
     cmd_contracts_sign,
     cmd_contracts_update,
 )
@@ -42,3 +43,11 @@ def add_contract_parsers(subparsers: argparse._SubParsersAction) -> None:
     p_contracts_update.add_argument("--total", dest="total_amount", default=None)
     p_contracts_update.add_argument("--amount-due", dest="amount_due", default=None)
     p_contracts_update.set_defaults(func=cmd_contracts_update)
+
+    p_contracts_reassign = contracts_sub.add_parser(
+        "reassign",
+        help="Réassigner un contrat à un commercial (SALES sur ses contrats / MANAGEMENT)",
+    )
+    p_contracts_reassign.add_argument("contract_id", type=int)
+    p_contracts_reassign.add_argument("sales_contact_id", type=int)
+    p_contracts_reassign.set_defaults(func=cmd_contracts_reassign)

@@ -103,6 +103,45 @@ def create_event(
     return event
 
 
+def reassign_event(
+    session: Session,
+    current_employee: Employee,
+    *,
+    event_id: int,
+    support_contact_id: int,
+) -> Event:
+    """
+    Réassigne le support d'un événement.
+
+    Règles métier :
+    - MANAGEMENT uniquement
+    - l'événement doit exister
+    - l'employé support doit exister, être ROLE.SUPPORT, et être actif
+    """
+    if current_employee.role != Role.MANAGEMENT:
+        raise PermissionDeniedError("Seul le management peut réassigner un événement.")
+
+    repo = EventRepository(session)
+    event = repo.get_by_id(event_id)
+    if event is None:
+        raise NotFoundError("Événement introuvable.")
+
+    emp_repo = EmployeeRepository(session)
+    support = emp_repo.get_by_id(support_contact_id)
+    if support is None:
+        raise NotFoundError("Employé introuvable.")
+
+    if support.role != Role.SUPPORT:
+        raise ValidationError("L'employé assigné doit avoir le rôle SUPPORT.")
+
+    if not support.is_active:
+        raise ValidationError("Impossible d'assigner un employé désactivé.")
+
+    event.support_contact_id = support_contact_id
+    session.commit()
+    return event
+
+
 def update_event(
     session: Session,
     current_employee: Employee,
@@ -125,9 +164,7 @@ def update_event(
     - start_date < end_date
     - attendees >= 0
     - location non vide si fourni
-    - assignation support : MANAGEMENT uniquement
-      - l'employé assigné doit exister
-      - l'employé assigné doit être ROLE.SUPPORT
+    - assignation support : MANAGEMENT uniquement (via reassign_event)
     """
     if current_employee.role == Role.SALES:
         raise PermissionDeniedError(
@@ -144,6 +181,16 @@ def update_event(
             raise PermissionDeniedError(
                 "Vous ne pouvez modifier que les événements qui vous sont assignés."
             )
+
+    # Si on veut assigner/réassigner un support depuis update_event :
+    # on délègue à reassign_event pour éviter la duplication des règles.
+    if support_contact_id is not None:
+        return reassign_event(
+            session=session,
+            current_employee=current_employee,
+            event_id=event_id,
+            support_contact_id=support_contact_id,
+        )
 
     # Validations + valeurs finales
     final_start = start_date if start_date is not None else event.start_date
@@ -169,23 +216,6 @@ def update_event(
         event.attendees = attendees
     if notes is not None:
         event.notes = notes.strip() or None
-
-    # Assignation support (optionnelle)
-    # - MANAGEMENT peut assigner/changer
-    # - SUPPORT ne peut pas (on évite l'auto-assign ou le vol d'événement)
-    if support_contact_id is not None:
-        if current_employee.role != Role.MANAGEMENT:
-            raise PermissionDeniedError("Seul le management peut assigner un support.")
-
-        emp_repo = EmployeeRepository(session)
-        support = emp_repo.get_by_id(support_contact_id)
-        if support is None:
-            raise NotFoundError("Employé introuvable.")
-
-        if support.role != Role.SUPPORT:
-            raise ValidationError("L'employé assigné doit avoir le rôle SUPPORT.")
-
-        event.support_contact_id = support_contact_id
 
     session.commit()
     return event

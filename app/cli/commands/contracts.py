@@ -12,6 +12,7 @@ from app.services.contract_service import (
     ValidationError,
     create_contract,
     list_contracts,
+    reassign_contract,
     sign_contract,
     update_contract,
 )
@@ -144,5 +145,35 @@ def cmd_contracts_update(args: argparse.Namespace) -> None:
     except Exception as exc:
         session.rollback()
         print(f"Erreur lors de la mise à jour du contrat : {exc}")
+    finally:
+        session.close()
+
+
+def cmd_contracts_reassign(args: argparse.Namespace) -> None:
+    session = get_session()
+    try:
+        employee = get_current_employee(session)
+
+        contract = reassign_contract(
+            session=session,
+            current_employee=employee,
+            contract_id=args.contract_id,
+            new_sales_contact_id=args.sales_contact_id,
+        )
+
+        print(
+            "✅ Contrat réassigné : "
+            f"id={contract.id} | sales_contact_id={contract.sales_contact_id}"
+        )
+
+    except NotAuthenticatedError as exc:
+        print(f"❌ {exc}")
+    except PermissionDeniedError as exc:
+        print(f"⛔ Accès refusé : {exc}")
+    except (ValidationError, NotFoundError) as exc:
+        print(f"❌ {exc}")
+    except Exception as exc:
+        session.rollback()
+        print(f"❌ Erreur lors de la réassignation du contrat : {exc}")
     finally:
         session.close()

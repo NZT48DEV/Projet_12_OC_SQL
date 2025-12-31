@@ -5,6 +5,7 @@ import argparse
 from app.cli.commands.events import (
     cmd_events_create,
     cmd_events_list,
+    cmd_events_reassign,
     cmd_events_update,
 )
 
@@ -52,3 +53,16 @@ def add_event_parsers(subparsers: argparse._SubParsersAction) -> None:
     p_events_update.add_argument("--support-contact-id", type=int, default=None)
 
     p_events_update.set_defaults(func=cmd_events_update)
+
+    p_events_reassign = events_sub.add_parser(
+        "reassign",
+        help="Réassigner le support d'un événement (MANAGEMENT)",
+    )
+    p_events_reassign.add_argument("event_id", type=int)
+    p_events_reassign.add_argument(
+        "--support-contact-id",
+        type=int,
+        required=True,
+        help="ID du support",
+    )
+    p_events_reassign.set_defaults(func=cmd_events_reassign)
