@@ -133,6 +133,6 @@ python -m app.epicevents clients list
 ---
 
 ### Etat d'avancement du projet : [`docs/project_status.md`](docs/project_status.md)
-- La partie READ sécurisée est considérée comme terminée.
+- La partie CRUD sécurisée est considérée comme terminée.
 
 ---
