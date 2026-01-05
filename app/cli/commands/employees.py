@@ -18,21 +18,6 @@ from app.services.employee_service import (
 )
 
 
-def cmd_management_only(_: argparse.Namespace) -> None:
-    """Exécute une action réservée au rôle MANAGEMENT."""
-    session = get_session()
-    try:
-        employee = get_current_employee(session)
-        require_role(employee.role, allowed={Role.MANAGEMENT})
-        print("🔐 Action MANAGEMENT autorisée.")
-    except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
-    except AuthorizationError as exc:
-        print(f"⛔ Accès refusé : {exc}")
-    finally:
-        session.close()
-
-
 def cmd_create_employee(args: argparse.Namespace) -> None:
     """Crée un employé (bootstrap du premier MANAGEMENT possible)."""
     session = get_session()
