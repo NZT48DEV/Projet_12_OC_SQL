@@ -64,6 +64,7 @@
 │   ├── cli.md                     # Commandes CLI
 │   ├── database.md                # PostgreSQL + variables env + Alembic
 │   ├── erd.mmd                    # Schéma ERD
+│   ├── observability.md           # Sentry (monitoring)
 │   ├── project_status.md          # État du projet + next steps
 │   ├── quality_ci.md              # Qualité de code + CI
 │   └── schema_notes.md            # Notes de conception
@@ -73,8 +74,7 @@
 │   └── versions/
 ├── tests/
 │   ├── unit/
-│   ├── integration/
-│   └── functional/
+│   └── integration/
 ├── .env.example                   # Modèle de configuration (sans secrets)
 ├── .flake8
 ├── .gitignore

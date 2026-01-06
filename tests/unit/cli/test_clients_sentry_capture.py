@@ -5,107 +5,66 @@ import types
 import pytest
 
 
-class DummySession:
-    def __init__(self) -> None:
-        self.closed = False
-        self.rolled_back = False
-
-    def rollback(self) -> None:
-        self.rolled_back = True
-
-    def close(self) -> None:
-        self.closed = True
-
-
-def test_cmd_clients_create_unexpected_exception_rolls_back_and_is_captured(
+@pytest.mark.parametrize(
+    "func_name,args",
+    [
+        (
+            "cmd_clients_create",
+            types.SimpleNamespace(
+                first_name="A",
+                last_name="B",
+                email="a@b.com",
+                phone="0",
+                company_name="X",
+            ),
+        ),
+        (
+            "cmd_clients_update",
+            types.SimpleNamespace(
+                client_id=1,
+                first_name=None,
+                last_name=None,
+                email=None,
+                phone=None,
+                company_name=None,
+            ),
+        ),
+        (
+            "cmd_clients_reassign",
+            types.SimpleNamespace(client_id=1, sales_contact_id=2),
+        ),
+    ],
+)
+def test_clients_unexpected_exception_rolls_back_and_is_captured(
     monkeypatch: pytest.MonkeyPatch,
+    dummy_session_rb,
+    func_name: str,
+    args,
 ) -> None:
     import app.cli.commands.clients as cmds
 
-    session = DummySession()
-    monkeypatch.setattr(cmds, "get_session", lambda: session)
+    monkeypatch.setattr(cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(cmds, "get_current_employee", lambda s: object())
 
-    def boom(*args, **kwargs):
-        raise RuntimeError("boom-create-client")
+    # Patch le service appelé selon la commande
+    service_to_patch = {
+        "cmd_clients_create": "create_client",
+        "cmd_clients_update": "update_client",
+        "cmd_clients_reassign": "reassign_client",
+    }[func_name]
 
-    monkeypatch.setattr(cmds, "create_client", boom)
+    def boom(*_a, **_k):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(cmds, service_to_patch, boom)
 
     captured: list[Exception] = []
     monkeypatch.setattr(
         cmds.sentry_sdk, "capture_exception", lambda e: captured.append(e)
     )
 
-    args = types.SimpleNamespace(
-        first_name="A",
-        last_name="B",
-        email="a@b.com",
-        phone="0",
-        company_name="X",
-    )
-    cmds.cmd_clients_create(args)
+    getattr(cmds, func_name)(args)
 
-    assert session.rolled_back is True
-    assert session.closed is True
-    assert len(captured) == 1
-
-
-def test_cmd_clients_update_unexpected_exception_rolls_back_and_is_captured(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import app.cli.commands.clients as cmds
-
-    session = DummySession()
-    monkeypatch.setattr(cmds, "get_session", lambda: session)
-    monkeypatch.setattr(cmds, "get_current_employee", lambda s: object())
-
-    def boom(*args, **kwargs):
-        raise RuntimeError("boom-update-client")
-
-    monkeypatch.setattr(cmds, "update_client", boom)
-
-    captured: list[Exception] = []
-    monkeypatch.setattr(
-        cmds.sentry_sdk, "capture_exception", lambda e: captured.append(e)
-    )
-
-    args = types.SimpleNamespace(
-        client_id=1,
-        first_name=None,
-        last_name=None,
-        email=None,
-        phone=None,
-        company_name=None,
-    )
-    cmds.cmd_clients_update(args)
-
-    assert session.rolled_back is True
-    assert session.closed is True
-    assert len(captured) == 1
-
-
-def test_cmd_clients_reassign_unexpected_exception_rolls_back_and_is_captured(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import app.cli.commands.clients as cmds
-
-    session = DummySession()
-    monkeypatch.setattr(cmds, "get_session", lambda: session)
-    monkeypatch.setattr(cmds, "get_current_employee", lambda s: object())
-
-    def boom(*args, **kwargs):
-        raise RuntimeError("boom-reassign-client")
-
-    monkeypatch.setattr(cmds, "reassign_client", boom)
-
-    captured: list[Exception] = []
-    monkeypatch.setattr(
-        cmds.sentry_sdk, "capture_exception", lambda e: captured.append(e)
-    )
-
-    args = types.SimpleNamespace(client_id=1, sales_contact_id=2)
-    cmds.cmd_clients_reassign(args)
-
-    assert session.rolled_back is True
-    assert session.closed is True
+    assert dummy_session_rb.rolled_back is True
+    assert dummy_session_rb.closed is True
     assert len(captured) == 1
