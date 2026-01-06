@@ -104,3 +104,37 @@ def reload_module(module_name: str):
     if module_name in sys.modules:
         del sys.modules[module_name]
     return importlib.import_module(module_name)
+
+
+class DummySessionRB:
+    """Dummy session avec rollback + close (tests commandes CRUD)."""
+
+    def __init__(self) -> None:
+        self.closed = False
+        self.rolled_back = False
+
+    def rollback(self) -> None:
+        self.rolled_back = True
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class DummySessionCloseOnly:
+    """Dummy session avec close uniquement (tests auth)."""
+
+    def __init__(self) -> None:
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
+
+
+@pytest.fixture()
+def dummy_session_rb() -> DummySessionRB:
+    return DummySessionRB()
+
+
+@pytest.fixture()
+def dummy_session_close_only() -> DummySessionCloseOnly:
+    return DummySessionCloseOnly()

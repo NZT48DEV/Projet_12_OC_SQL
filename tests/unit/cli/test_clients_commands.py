@@ -2,31 +2,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import pytest
-
 from app.cli.commands import clients as clients_cmds
 
 
-class DummySession:
-    def __init__(self) -> None:
-        self.rolled_back = False
-        self.closed = False
-
-    def rollback(self) -> None:
-        self.rolled_back = True
-
-    def close(self) -> None:
-        self.closed = True
-
-
-@pytest.fixture()
-def session() -> DummySession:
-    return DummySession()
-
-
-def test_cmd_clients_list_empty(monkeypatch, capsys, session):
+def test_cmd_clients_list_empty(monkeypatch, capsys, dummy_session_rb):
     """clients list: affiche 'Aucun client' si la liste est vide."""
-    monkeypatch.setattr(clients_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(clients_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         clients_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -36,12 +17,12 @@ def test_cmd_clients_list_empty(monkeypatch, capsys, session):
     out = capsys.readouterr().out
 
     assert "ℹ️  Aucun client trouvé." in out
-    assert session.closed is True
+    assert dummy_session_rb.closed is True
 
 
-def test_cmd_clients_list_prints(monkeypatch, capsys, session):
+def test_cmd_clients_list_prints(monkeypatch, capsys, dummy_session_rb):
     """clients list: affiche chaque client formaté."""
-    monkeypatch.setattr(clients_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(clients_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         clients_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -62,11 +43,12 @@ def test_cmd_clients_list_prints(monkeypatch, capsys, session):
     assert "📋 Clients" in out
     assert "id=1" in out
     assert "sales_contact_id=10" in out
+    assert dummy_session_rb.closed is True
 
 
-def test_cmd_clients_create_success(monkeypatch, capsys, session):
+def test_cmd_clients_create_success(monkeypatch, capsys, dummy_session_rb):
     """clients create: crée un client et affiche la confirmation."""
-    monkeypatch.setattr(clients_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(clients_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         clients_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -93,11 +75,14 @@ def test_cmd_clients_create_success(monkeypatch, capsys, session):
     out = capsys.readouterr().out
     assert "✅ Client créé" in out
     assert "id=1" in out
+    assert dummy_session_rb.closed is True
 
 
-def test_cmd_clients_create_unexpected_error_rollbacks(monkeypatch, capsys, session):
+def test_cmd_clients_create_unexpected_error_rollbacks(
+    monkeypatch, capsys, dummy_session_rb
+):
     """clients create: rollback + message générique si exception inattendue."""
-    monkeypatch.setattr(clients_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(clients_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         clients_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -118,4 +103,5 @@ def test_cmd_clients_create_unexpected_error_rollbacks(monkeypatch, capsys, sess
 
     out = capsys.readouterr().out
     assert "❌ Erreur lors de la création du client" in out
-    assert session.rolled_back is True
+    assert dummy_session_rb.rolled_back is True
+    assert dummy_session_rb.closed is True

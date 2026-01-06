@@ -14,6 +14,16 @@ pre-commit install
 
 ---
 
+## Tests
+
+Lancer l’ensemble des tests automatisés :
+
+```bash
+pytest
+```
+
+---
+
 ## Intégration Continue (CI)
 
 Une **CI GitHub Actions** est configurée.

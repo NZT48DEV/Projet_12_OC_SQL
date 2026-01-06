@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -32,6 +35,7 @@ jobs:
       DATABASE_URL_TEST: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
       EPICCRM_JWT_SECRET: ${{ secrets.EPICCRM_JWT_SECRET }}
       SENTRY_DSN: ""
+      SENTRY_ENVIRONMENT: "ci"
       EPICCRM_JWT_ACCESS_MINUTES: ${{ vars.EPICCRM_JWT_ACCESS_MINUTES }}
       EPICCRM_JWT_REFRESH_DAYS: ${{ vars.EPICCRM_JWT_REFRESH_DAYS }}
       EPICCRM_JWT_ALG: ${{ vars.EPICCRM_JWT_ALG }}
@@ -64,3 +68,14 @@ jobs:
 
       - name: Run tests
         run: pipenv run pytest -q
+
+      - name: Create Sentry release
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: ${{ github.sha }}

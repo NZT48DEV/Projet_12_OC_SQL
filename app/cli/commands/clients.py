@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 
+import sentry_sdk
+
 from app.db.session import get_session
 from app.services.client_service import (
     ClientAlreadyExistsError,
@@ -35,6 +37,10 @@ def cmd_clients_list(_: argparse.Namespace) -> None:
 
     except NotAuthenticatedError as exc:
         print(f"❌ {exc}")
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        print(f"❌ Erreur lors de la récupération des clients : {exc}")
+
     finally:
         session.close()
 
@@ -70,6 +76,7 @@ def cmd_clients_create(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la création du client : {exc}")
     finally:
         session.close()
@@ -107,6 +114,7 @@ def cmd_clients_update(args: argparse.Namespace) -> None:
         print(f"Erreur : {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"Erreur lors de la mise à jour du client : {exc}")
     finally:
         session.close()
@@ -137,6 +145,7 @@ def cmd_clients_reassign(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la réassignation du client : {exc}")
     finally:
         session.close()

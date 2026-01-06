@@ -8,19 +8,11 @@ from app.cli.commands.employees import (
     cmd_employees_delete,
     cmd_employees_list,
     cmd_employees_reactivate,
-    cmd_management_only,
 )
 from app.models.employee import Role
 
 
 def add_employee_parsers(subparsers: argparse._SubParsersAction) -> None:
-    # management-only
-    p_management = subparsers.add_parser(
-        "management-only",
-        help="Commande réservée au rôle MANAGEMENT",
-    )
-    p_management.set_defaults(func=cmd_management_only)
-
     # create-employee
     p_create = subparsers.add_parser(
         "create-employee",

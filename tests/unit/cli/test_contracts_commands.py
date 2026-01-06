@@ -2,31 +2,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import pytest
-
 from app.cli.commands import contracts as contracts_cmds
 
 
-class DummySession:
-    def __init__(self) -> None:
-        self.rolled_back = False
-        self.closed = False
-
-    def rollback(self) -> None:
-        self.rolled_back = True
-
-    def close(self) -> None:
-        self.closed = True
-
-
-@pytest.fixture()
-def session() -> DummySession:
-    return DummySession()
-
-
-def test_cmd_contracts_list_empty(monkeypatch, capsys, session):
+def test_cmd_contracts_list_empty(monkeypatch, capsys, dummy_session_rb):
     """contracts list: affiche 'Aucun contrat' si vide."""
-    monkeypatch.setattr(contracts_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(contracts_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         contracts_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -36,11 +17,12 @@ def test_cmd_contracts_list_empty(monkeypatch, capsys, session):
     out = capsys.readouterr().out
 
     assert "ℹ️  Aucun contrat trouvé." in out
+    assert dummy_session_rb.closed is True
 
 
-def test_cmd_contracts_create_success(monkeypatch, capsys, session):
+def test_cmd_contracts_create_success(monkeypatch, capsys, dummy_session_rb):
     """contracts create: parse Decimal et affiche la confirmation."""
-    monkeypatch.setattr(contracts_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(contracts_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         contracts_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -63,11 +45,12 @@ def test_cmd_contracts_create_success(monkeypatch, capsys, session):
     out = capsys.readouterr().out
     assert "✅ Contrat créé" in out
     assert "id=1" in out
+    assert dummy_session_rb.closed is True
 
 
-def test_cmd_contracts_sign_authorization_error(monkeypatch, capsys, session):
+def test_cmd_contracts_sign_authorization_error(monkeypatch, capsys, dummy_session_rb):
     """contracts sign: affiche ⛔ si require_role refuse."""
-    monkeypatch.setattr(contracts_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(contracts_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         contracts_cmds, "get_current_employee", lambda s: SimpleNamespace(role="SALES")
     )
@@ -87,11 +70,14 @@ def test_cmd_contracts_sign_authorization_error(monkeypatch, capsys, session):
 
     out = capsys.readouterr().out
     assert "⛔" in out
+    assert dummy_session_rb.closed is True
 
 
-def test_cmd_contracts_update_unexpected_error_rollbacks(monkeypatch, capsys, session):
+def test_cmd_contracts_update_unexpected_error_rollbacks(
+    monkeypatch, capsys, dummy_session_rb
+):
     """contracts update: rollback + message générique si exception inattendue."""
-    monkeypatch.setattr(contracts_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(contracts_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         contracts_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -106,4 +92,5 @@ def test_cmd_contracts_update_unexpected_error_rollbacks(monkeypatch, capsys, se
 
     out = capsys.readouterr().out
     assert "Erreur lors de la mise à jour du contrat" in out
-    assert session.rolled_back is True
+    assert dummy_session_rb.rolled_back is True
+    assert dummy_session_rb.closed is True

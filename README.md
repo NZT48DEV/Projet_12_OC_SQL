@@ -70,6 +70,10 @@ Les variables détaillées et les bonnes pratiques de sécurité sont décrites 
 
 ## Démarrage rapide
 
+⚠️ Le premier employé créé doit obligatoirement avoir le rôle MANAGEMENT.
+Ce mécanisme de bootstrap garantit qu’aucun compte non privilégié ne puisse initialiser le système.
+
+
 ```bash
 alembic upgrade head
 python -m app.epicevents create-employee John Doe johndoe@test.com Secret123! MANAGEMENT
@@ -132,7 +136,13 @@ python -m app.epicevents clients list
 
 ---
 
+### Observabilité & monitoring : [`docs/observability.md`](docs/observability.md)
+- Suivi des erreurs runtime avec Sentry
+- Capture centralisée des exceptions
+- Gestion des environnements dev / test / prod
+
+---
+
 ### Etat d'avancement du projet : [`docs/project_status.md`](docs/project_status.md)
-- La partie CRUD sécurisée est considérée comme terminée.
 
 ---

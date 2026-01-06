@@ -3,31 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from types import SimpleNamespace
 
-import pytest
-
 from app.cli.commands import events as events_cmds
 
 
-class DummySession:
-    def __init__(self) -> None:
-        self.rolled_back = False
-        self.closed = False
-
-    def rollback(self) -> None:
-        self.rolled_back = True
-
-    def close(self) -> None:
-        self.closed = True
-
-
-@pytest.fixture()
-def session() -> DummySession:
-    return DummySession()
-
-
-def test_cmd_events_create_bad_datetime_format(monkeypatch, capsys, session):
+def test_cmd_events_create_bad_datetime_format(monkeypatch, capsys, dummy_session_rb):
     """events create: refuse si format date/heure invalide."""
-    monkeypatch.setattr(events_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(events_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         events_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -48,11 +29,14 @@ def test_cmd_events_create_bad_datetime_format(monkeypatch, capsys, session):
     out = capsys.readouterr().out
 
     assert "❌ Format de date/heure invalide" in out
+    assert dummy_session_rb.closed is True
 
 
-def test_cmd_events_update_requires_both_start_fields(monkeypatch, capsys, session):
+def test_cmd_events_update_requires_both_start_fields(
+    monkeypatch, capsys, dummy_session_rb
+):
     """events update: start-date doit être fourni avec start-time."""
-    monkeypatch.setattr(events_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(events_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         events_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -73,11 +57,12 @@ def test_cmd_events_update_requires_both_start_fields(monkeypatch, capsys, sessi
     out = capsys.readouterr().out
 
     assert "❌ Pour modifier le début" in out
+    assert dummy_session_rb.closed is True
 
 
-def test_cmd_events_update_success(monkeypatch, capsys, session):
+def test_cmd_events_update_success(monkeypatch, capsys, dummy_session_rb):
     """events update: parse les dates optionnelles et affiche la confirmation."""
-    monkeypatch.setattr(events_cmds, "get_session", lambda: session)
+    monkeypatch.setattr(events_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         events_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
@@ -111,3 +96,4 @@ def test_cmd_events_update_success(monkeypatch, capsys, session):
 
     assert "Événement mis à jour" in out
     assert "id=1" in out
+    assert dummy_session_rb.closed is True

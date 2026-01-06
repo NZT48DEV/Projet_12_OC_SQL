@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 from decimal import Decimal
 
+import sentry_sdk
+
 from app.core.authorization import AuthorizationError, require_role
 from app.db.session import get_session
 from app.models.employee import Role
@@ -40,6 +42,10 @@ def cmd_contracts_list(_: argparse.Namespace) -> None:
 
     except NotAuthenticatedError as exc:
         print(f"❌ {exc}")
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        print(f"❌ Erreur lors de la récupération des contrats : {exc}")
+
     finally:
         session.close()
 
@@ -76,6 +82,7 @@ def cmd_contracts_create(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la création du contrat : {exc}")
     finally:
         session.close()
@@ -83,30 +90,35 @@ def cmd_contracts_create(args: argparse.Namespace) -> None:
 
 def cmd_contracts_sign(args: argparse.Namespace) -> None:
     session = get_session()
-    current_employee = get_current_employee(session)
-
     try:
-        require_role(
-            current_employee.role,
-            allowed={Role.MANAGEMENT},
-        )
+        current_employee = get_current_employee(session)
+
+        require_role(current_employee.role, allowed={Role.MANAGEMENT})
 
         contract = sign_contract(
-            session,
-            current_employee,
+            session=session,
+            current_employee=current_employee,
             contract_id=args.contract_id,
         )
 
         print(f"✅ Contrat {contract.id} signé.")
 
-    except AuthorizationError as e:
-        print(f"⛔ {e}")
-    except PermissionDeniedError as e:
-        print(f"⛔ {e}")
-    except NotFoundError as e:
-        print(f"❌ {e}")
-    except ValidationError as e:
-        print(f"⚠️ {e}")
+    except NotAuthenticatedError as exc:
+        print(f"❌ {exc}")
+    except AuthorizationError as exc:
+        print(f"⛔ {exc}")
+    except PermissionDeniedError as exc:
+        print(f"⛔ {exc}")
+    except NotFoundError as exc:
+        print(f"❌ {exc}")
+    except ValidationError as exc:
+        print(f"⚠️ {exc}")
+    except Exception as exc:
+        session.rollback()
+        sentry_sdk.capture_exception(exc)
+        print(f"❌ Erreur lors de la signature du contrat : {exc}")
+    finally:
+        session.close()
 
 
 def cmd_contracts_update(args: argparse.Namespace) -> None:
@@ -144,6 +156,7 @@ def cmd_contracts_update(args: argparse.Namespace) -> None:
         print(f"Données invalides : {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"Erreur lors de la mise à jour du contrat : {exc}")
     finally:
         session.close()
@@ -174,6 +187,7 @@ def cmd_contracts_reassign(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la réassignation du contrat : {exc}")
     finally:
         session.close()
