@@ -112,7 +112,7 @@ def test_cli_refresh_token_success_updates_tokens(
     assert access_before is not None
     assert refresh_before is not None
 
-    time.sleep(0.5)
+    time.sleep(2)
 
     run_cli(monkeypatch, ["refresh-token"])
     main()
