@@ -155,7 +155,6 @@ def test_cli_contracts_sign_requires_management(
 ):
     patch_cli_env(monkeypatch, db_session, tmp_path)
 
-    create_employee(db_session, email="mgmt-sign@test.com", role=Role.MANAGEMENT)
     sales = create_employee(db_session, email="sales-sign@test.com", role=Role.SALES)
 
     client = Client(
