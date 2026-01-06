@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 
+import sentry_sdk
+
 from app.core.authorization import AuthorizationError, require_role
 from app.core.security import hash_password
 from app.db.session import get_session
@@ -54,13 +56,13 @@ def cmd_create_employee(args: argparse.Namespace) -> None:
         print("❌ Rôle invalide. Choix possibles : MANAGEMENT, SALES, SUPPORT.")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la création de l'employé : {exc}")
     finally:
         session.close()
 
 
 def cmd_employees_list(args: argparse.Namespace) -> None:
-    """Liste les employés (auth obligatoire)."""
     session = get_session()
     try:
         get_current_employee(session)
@@ -76,6 +78,11 @@ def cmd_employees_list(args: argparse.Namespace) -> None:
         for e in employees:
             print(f"- id={e.id} | email={e.email} | role={e.role.value}")
 
+    except NotAuthenticatedError as exc:
+        print(f"❌ {exc}")
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        print(f"❌ Erreur lors de la récupération des employés : {exc}")
     finally:
         session.close()
 
@@ -113,6 +120,7 @@ def cmd_employees_deactivate(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la désactivation de l'employé : {exc}")
     finally:
         session.close()
@@ -151,6 +159,7 @@ def cmd_employees_reactivate(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la réactivation de l'employé : {exc}")
     finally:
         session.close()
@@ -209,6 +218,7 @@ def cmd_employees_delete(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la suppression/désactivation de l'employé : {exc}")
     finally:
         session.close()

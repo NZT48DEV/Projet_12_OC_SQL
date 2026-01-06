@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 
+import sentry_sdk
+
 from app.core.jwt_service import TokenError, create_token_pair, refresh_access_token
 from app.core.token_store import clear_tokens, load_refresh_token, save_tokens
 from app.db.session import get_session
@@ -30,6 +32,9 @@ def cmd_login(args: argparse.Namespace) -> None:
         print("ℹ️  Utilise `refresh-token` si le token expire.")
     except AuthenticationError as exc:
         print(f"❌ {exc}")
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        print(f"❌ Erreur inattendue lors du login : {exc}")
     finally:
         session.close()
 
@@ -58,6 +63,9 @@ def cmd_refresh_token(_: argparse.Namespace) -> None:
     except TokenError as exc:
         print(f"❌ Impossible de rafraîchir le token : {exc}")
         print("➡️ Faites `login`.")
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        print(f"❌ Erreur inattendue lors du refresh token : {exc}")
 
 
 def cmd_whoami(_: argparse.Namespace) -> None:

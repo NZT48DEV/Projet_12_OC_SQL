@@ -12,6 +12,7 @@ alembic = "*"
 argon2-cffi = "*"
 pyjwt = "*"
 keyring = "*"
+sentry-sdk = "*"
 
 [dev-packages]
 black = "*"

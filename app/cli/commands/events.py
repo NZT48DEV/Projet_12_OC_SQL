@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 
+import sentry_sdk
+
 from app.db.session import get_session
 from app.services.current_employee import NotAuthenticatedError, get_current_employee
 from app.services.event_service import (
@@ -37,6 +39,9 @@ def cmd_events_list(_: argparse.Namespace) -> None:
 
     except NotAuthenticatedError as exc:
         print(f"❌ {exc}")
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        print(f"❌ Erreur lors de la récupération des événements : {exc}")
     finally:
         session.close()
 
@@ -85,6 +90,7 @@ def cmd_events_create(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la création de l'événement : {exc}")
     finally:
         session.close()
@@ -151,6 +157,7 @@ def cmd_events_update(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la mise à jour de l'événement : {exc}")
     finally:
         session.close()
@@ -181,6 +188,7 @@ def cmd_events_reassign(args: argparse.Namespace) -> None:
         print(f"❌ {exc}")
     except Exception as exc:
         session.rollback()
+        sentry_sdk.capture_exception(exc)
         print(f"❌ Erreur lors de la réassignation de l'événement : {exc}")
     finally:
         session.close()
