@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 
 import sentry_sdk
+from rich.table import Table
 
+from app.cli.console import console, error, forbidden, info, success, warning
 from app.core.authorization import AuthorizationError, require_role
 from app.core.security import hash_password
 from app.db.session import get_session
@@ -20,6 +22,11 @@ from app.services.employee_service import (
 )
 
 
+def _fmt_dt(dt) -> str:
+    """Formate une date/heure pour affichage CLI."""
+    return dt.strftime("%d/%m/%Y %H:%M:%S") if dt else "—"
+
+
 def cmd_create_employee(args: argparse.Namespace) -> None:
     """Crée un employé (bootstrap du premier MANAGEMENT possible)."""
     session = get_session()
@@ -27,7 +34,7 @@ def cmd_create_employee(args: argparse.Namespace) -> None:
         employees_count = session.query(Employee).count()
         if employees_count == 0:
             if args.role != Role.MANAGEMENT.name:
-                print("❌ Le premier compte doit être MANAGEMENT.")
+                error("Le premier compte doit être MANAGEMENT.")
                 return
         else:
             current_employee = get_current_employee(session)
@@ -44,45 +51,83 @@ def cmd_create_employee(args: argparse.Namespace) -> None:
         session.commit()
         session.refresh(new_employee)
 
-        print(
-            f"✅ Employé créé : {new_employee.first_name} {new_employee.last_name} "
+        success(
+            f"Employé créé : {new_employee.first_name} {new_employee.last_name} "
             f"(email={new_employee.email}, role={new_employee.role})"
         )
+
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except AuthorizationError as exc:
-        print(f"⛔ Accès refusé : {exc}")
+        forbidden(f"Accès refusé : {exc}")
     except KeyError:
-        print("❌ Rôle invalide. Choix possibles : MANAGEMENT, SALES, SUPPORT.")
+        error("Rôle invalide. Choix possibles : MANAGEMENT, SALES, SUPPORT.")
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la création de l'employé : {exc}")
+        error(f"Erreur lors de la création de l'employé : {exc}")
     finally:
         session.close()
 
 
 def cmd_employees_list(args: argparse.Namespace) -> None:
+    """Liste les employés (avec filtre optionnel par rôle)."""
     session = get_session()
     try:
-        get_current_employee(session)
+        current_employee = get_current_employee(session)
+        is_management = current_employee.role == Role.MANAGEMENT
 
         repo = EmployeeRepository(session)
         employees = repo.list_by_role(Role[args.role]) if args.role else repo.list_all()
 
         if not employees:
-            print("Aucun employé trouvé.")
+            info("Aucun employé trouvé.")
             return
 
-        print("Employés :")
+        table = Table(title="Employés")
+
+        table.add_column("ID", justify="right", no_wrap=True)
+        table.add_column("Nom")
+        table.add_column("Email")
+        table.add_column("Rôle", no_wrap=True)
+        table.add_column("Statut", justify="center", no_wrap=True)
+
+        # Colonnes sensibles : uniquement MANAGEMENT
+        if is_management:
+            table.add_column("Créé le", no_wrap=True)
+            table.add_column("Désactivé le", no_wrap=True)
+            table.add_column("Réactivé le", no_wrap=True)
+
         for e in employees:
-            print(f"- id={e.id} | email={e.email} | role={e.role.value}")
+            status = "✅ Actif" if e.is_active else "⛔ Désactivé"
+
+            base_row = [
+                str(e.id),
+                f"{e.first_name} {e.last_name}",
+                e.email,
+                e.role.value,
+                status,
+            ]
+
+            if is_management:
+                base_row.extend(
+                    [
+                        _fmt_dt(e.created_at),
+                        _fmt_dt(e.deactivated_at) if not e.is_active else "—",
+                        _fmt_dt(e.reactivated_at),
+                    ]
+                )
+
+            table.add_row(*base_row)
+
+        table.caption = f"{len(employees)} employé(s)"
+        console.print(table)
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la récupération des employés : {exc}")
+        error(f"Erreur lors de la récupération des employés : {exc}")
     finally:
         session.close()
 
@@ -99,29 +144,23 @@ def cmd_employees_deactivate(args: argparse.Namespace) -> None:
             employee_id=args.employee_id,
         )
 
-        deactivated_at = (
-            employee.deactivated_at.strftime("%d/%m/%Y %H:%M:%S")
-            if employee.deactivated_at
-            else "N/A"
-        )
-
-        print(
-            f"✅ Employé désactivé : id={employee.id} | email={employee.email} | "
-            f"désactivé_le={deactivated_at}"
+        success(
+            f"Employé désactivé : id={employee.id} | email={employee.email} | "
+            f"désactivé_le={_fmt_dt(employee.deactivated_at)}"
         )
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"⛔ Accès refusé : {exc}")
+        forbidden(f"Accès refusé : {exc}")
     except ValidationError as exc:
-        print(f"⚠️ {exc}")
+        warning(str(exc))
     except NotFoundError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la désactivation de l'employé : {exc}")
+        error(f"Erreur lors de la désactivation de l'employé : {exc}")
     finally:
         session.close()
 
@@ -138,40 +177,29 @@ def cmd_employees_reactivate(args: argparse.Namespace) -> None:
             employee_id=args.employee_id,
         )
 
-        reactivated_at = (
-            employee.reactivated_at.strftime("%d/%m/%Y %H:%M:%S")
-            if getattr(employee, "reactivated_at", None)
-            else "N/A"
-        )
-
-        print(
-            f"✅ Employé réactivé : id={employee.id} | email={employee.email} | "
-            f"réactivé_le={reactivated_at}"
+        success(
+            f"Employé réactivé : id={employee.id} | email={employee.email} | "
+            f"réactivé_le={_fmt_dt(employee.reactivated_at)}"
         )
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"⛔ Accès refusé : {exc}")
+        forbidden(f"Accès refusé : {exc}")
     except ValidationError as exc:
-        print(f"⚠️ {exc}")
+        warning(str(exc))
     except NotFoundError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la réactivation de l'employé : {exc}")
+        error(f"Erreur lors de la réactivation de l'employé : {exc}")
     finally:
         session.close()
 
 
 def cmd_employees_delete(args: argparse.Namespace) -> None:
-    """
-    Supprime un employé.
-    - par défaut : soft delete (désactivation)
-    - avec --hard : suppression définitive (dangereux) + --confirm obligatoire
-    Réservé MANAGEMENT.
-    """
+    """Supprime un employé (soft par défaut, hard avec --hard + --confirm)."""
     session = get_session()
     try:
         current_employee = get_current_employee(session)
@@ -187,38 +215,32 @@ def cmd_employees_delete(args: argparse.Namespace) -> None:
                 employee_id=args.employee_id,
                 confirm_employee_id=args.confirm,
             )
-            print(f"✅ Employé supprimé définitivement : id={args.employee_id}")
+            success(f"Employé supprimé définitivement : id={args.employee_id}")
             return
 
-        # SOFT DELETE (par défaut)
+        # SOFT DELETE
         employee = deactivate_employee(
             session=session,
             current_employee=current_employee,
             employee_id=args.employee_id,
         )
 
-        deactivated_at = (
-            employee.deactivated_at.strftime("%d/%m/%Y %H:%M:%S")
-            if employee.deactivated_at
-            else "N/A"
-        )
-
-        print(
-            f"✅ Employé désactivé : id={employee.id} | email={employee.email} | "
-            f"désactivé_le={deactivated_at}"
+        success(
+            f"Employé désactivé : id={employee.id} | email={employee.email} | "
+            f"désactivé_le={_fmt_dt(employee.deactivated_at)}"
         )
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"⛔ Accès refusé : {exc}")
+        forbidden(f"Accès refusé : {exc}")
     except ValidationError as exc:
-        print(f"⚠️ {exc}")
+        warning(str(exc))
     except NotFoundError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la suppression/désactivation de l'employé : {exc}")
+        error(f"Erreur lors de la suppression/désactivation de l'employé : {exc}")
     finally:
         session.close()

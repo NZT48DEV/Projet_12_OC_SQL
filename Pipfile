@@ -13,6 +13,9 @@ argon2-cffi = "*"
 pyjwt = "*"
 keyring = "*"
 sentry-sdk = "*"
+click = "*"
+rich = "*"
+epic-events-crm = {file = ".", editable = true}
 
 [dev-packages]
 black = "*"

@@ -1,13 +1,15 @@
 ## État du projet — Epic Events CRM
 
 ### Avancement global
-- ✔️ Architecture backend Python / PostgreSQL opérationnelle
-- ✔️ Authentification JWT sécurisée en CLI
-- ✔️ Gestion complète des employés, clients, contrats et événements
-- ✔️ Règles métier et autorisations par rôle implémentées
-- ✔️ Couverture de tests unitaires et d’intégration
-- ✔️ Mise en place de l’observabilité avec Sentry
+- ✔️ Architecture backend Python / PostgreSQL
+- ✔️ Authentification JWT sécurisée (CLI)
+- ✔️ Gestion complète employés / clients / contrats / événements
+- ✔️ Règles métier et autorisations par rôle
+- ✔️ CLI moderne avec Click
+- ✔️ UX terminal avancée avec Rich
+- ✔️ Observabilité et remontée d’erreurs via Sentry
+- ✔️ Tests unitaires et d’intégration (CI)
 
-### Prochaines évolutions prévues
-- 🔜 Amélioration de l’expérience CLI avec **Click**
-- 🔜 Mise en forme avancée des sorties terminal avec **Rich**
+### Prochaines évolutions possibles
+- Ajout de commandes supplémentaires (si nécessaire)
+- Dernière vérifications et Refactoring (si nécessaire)

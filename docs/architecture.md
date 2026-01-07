@@ -10,7 +10,8 @@
 │   ├── epicevents.py              # Point d’entrée
 │   ├── cli/                       # Interface en ligne de commande
 │   │   ├── __init__.py
-│   │   ├── parser.py
+│   │   ├── click_utils.py         # Utilitaires d'adaptation Click -> handlers existants.
+│   │   ├── console.py             # Helpers d'affichage pour la CLI.
 │   │   ├── commands/
 │   │   │   ├── __init__.py
 │   │   │   ├── auth.py
@@ -18,37 +19,32 @@
 │   │   │   ├── contracts.py
 │   │   │   ├── employees.py
 │   │   │   └── events.py
-│   │   ├── parsers/
-│   │   │   ├── __init__.py
-│   │   │   ├── auth.py
-│   │   │   ├── clients.py
-│   │   │   ├── contracts.py
-│   │   │   ├── employees.py
-│   │   │   └── events.py
-│   ├── core/                      # Sécurité, JWT, configuration, logging
+│   ├── core/                      # Sécurité, JWT, configuration, Sentry
+│   │   ├── __init__.py
 │   │   ├── authorization.py
 │   │   ├── jwt_service.py
+│   │   ├── observability.py
 │   │   ├── security.py
 │   │   └── token_store.py
 │   ├── db/                        # Gestion base de données (SQLAlchemy)
 │   │   ├── __init__.py
 │   │   ├── base.py                # Déclaration Base ORM
 │   │   ├── config.py              # Chargement DATABASE_URL
+│   │   ├── db_check_sqlalchemy.py # Vérifications de cohérence
 │   │   ├── engine.py              # Création de l'engine SQLAlchemy
-│   │   ├── session.py             # SessionLocal
 │   │   ├── init_db.py             # Initialisation DB
-│   │   └── db_check_sqlalchemy.py # Vérifications de cohérence
+│   │   └── session.py             # SessionLocal
 │   ├── models/                    # Modèles ORM
 │   │   ├── __init__.py
-│   │   ├── employee.py
 │   │   ├── client.py
 │   │   ├── contract.py
+│   │   ├── employee.py
 │   │   └── event.py
 │   ├── repositories/              # Accès aux données (DAL)
 │   │   ├── __init__.py
-│   │   ├── employee_repository.py
 │   │   ├── client_repository.py
 │   │   ├── contract_repository.py
+│   │   ├── employee_repository.py
 │   │   └── event_repository.py
 │   └── services/                  # Logique métier
 │       ├── __init__.py
@@ -68,8 +64,6 @@
 │   ├── project_status.md          # État du projet + next steps
 │   ├── quality_ci.md              # Qualité de code + CI
 │   └── schema_notes.md            # Notes de conception
-├── htmlcov/
-│   └── index.html                 # Rapport de couverture pytest
 ├── migrations/                    # Migrations Alembic
 │   └── versions/
 ├── tests/

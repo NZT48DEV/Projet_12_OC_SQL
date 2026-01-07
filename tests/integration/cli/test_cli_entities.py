@@ -4,17 +4,14 @@ from decimal import Decimal
 
 from app.core import jwt_service, token_store
 from app.core.security import hash_password
-from app.epicevents import main
 from app.models.client import Client
 from app.models.contract import Contract
 from app.models.employee import Employee, Role
-
-
-def run_cli(monkeypatch, args: list[str]) -> None:
-    monkeypatch.setattr("sys.argv", ["epicevents"] + args)
+from tests.integration.cli._click_runner import invoke_cli
 
 
 def patch_cli_env(monkeypatch, db_session, tmp_path) -> None:
+    """Configure la DB de test, le secret JWT et le fichier de tokens temporaire."""
     monkeypatch.setenv("EPICCRM_JWT_SECRET", "test_secret__do_not_use_in_prod")
     monkeypatch.setattr(token_store, "keyring", None)
     monkeypatch.setattr(token_store, "_token_path", lambda: tmp_path / "tokens.json")
@@ -31,11 +28,13 @@ def patch_cli_env(monkeypatch, db_session, tmp_path) -> None:
 
 
 def seed_tokens(monkeypatch, tmp_path, employee_id: int) -> None:
+    """Seed des tokens valides pour employee_id."""
     pair = jwt_service.create_token_pair(employee_id=employee_id)
     token_store.save_tokens(pair.access_token, pair.refresh_token)
 
 
 def create_employee(db_session, *, email: str, role: Role) -> Employee:
+    """Crée et persiste un employé de test."""
     emp = Employee(
         first_name="T",
         last_name="U",
@@ -50,24 +49,24 @@ def create_employee(db_session, *, email: str, role: Role) -> Employee:
 
 
 def test_cli_clients_create_and_list(monkeypatch, tmp_path, capsys, db_session):
+    """Créer puis lister un client via la CLI."""
     patch_cli_env(monkeypatch, db_session, tmp_path)
 
     sales = create_employee(db_session, email="sales@test.com", role=Role.SALES)
     seed_tokens(monkeypatch, tmp_path, sales.id)
 
-    run_cli(monkeypatch, ["clients", "create", "Jean", "Dupont", "jean@test.com"])
-    main()
-    out = capsys.readouterr().out
-    assert "✅ Client créé" in out
+    result = invoke_cli(["clients", "create", "Jean", "Dupont", "jean@test.com"])
+    assert result.exit_code == 0
+    assert "✅ Client créé" in result.output
 
-    run_cli(monkeypatch, ["clients", "list"])
-    main()
-    out = capsys.readouterr().out
-    assert "📋 Clients" in out
-    assert "jean@test.com" in out
+    result = invoke_cli(["clients", "list"])
+    assert result.exit_code == 0
+    assert "Clients" in result.output
+    assert "jean@test.com" in result.output
 
 
 def test_cli_contracts_create_and_list(monkeypatch, tmp_path, capsys, db_session):
+    """Créer puis lister un contrat via la CLI."""
     patch_cli_env(monkeypatch, db_session, tmp_path)
 
     mgmt = create_employee(db_session, email="mgmt@test.com", role=Role.MANAGEMENT)
@@ -82,26 +81,24 @@ def test_cli_contracts_create_and_list(monkeypatch, tmp_path, capsys, db_session
     db_session.add(client)
     db_session.commit()
     db_session.refresh(client)
-    client_id = client.id  # ✅ garder un scalaire (évite DetachedInstanceError)
+    client_id = client.id
 
     seed_tokens(monkeypatch, tmp_path, mgmt.id)
 
-    run_cli(
-        monkeypatch,
-        ["contracts", "create", str(client_id), "1000", "250", "--signed"],
+    result = invoke_cli(
+        ["contracts", "create", str(client_id), "1000", "250", "--signed"]
     )
-    main()
-    out = capsys.readouterr().out
-    assert "✅ Contrat créé" in out
+    assert result.exit_code == 0
+    assert "✅ Contrat créé" in result.output
 
-    run_cli(monkeypatch, ["contracts", "list"])
-    main()
-    out = capsys.readouterr().out
-    assert "📋 Contrats" in out
-    assert f"client_id={client_id}" in out
+    result = invoke_cli(["contracts", "list"])
+    assert result.exit_code == 0
+    assert "Contrats" in result.output
+    assert str(client_id) in result.output
 
 
 def test_cli_events_create_and_list(monkeypatch, tmp_path, capsys, db_session):
+    """Créer puis lister un événement via la CLI."""
     patch_cli_env(monkeypatch, db_session, tmp_path)
 
     sales = create_employee(db_session, email="sales3@test.com", role=Role.SALES)
@@ -116,7 +113,7 @@ def test_cli_events_create_and_list(monkeypatch, tmp_path, capsys, db_session):
     db_session.add(client)
     db_session.commit()
     db_session.refresh(client)
-    client_id = client.id  # ✅ scalaire
+    client_id = client.id
 
     contract = Contract(
         client_id=client_id,
@@ -128,10 +125,9 @@ def test_cli_events_create_and_list(monkeypatch, tmp_path, capsys, db_session):
     db_session.add(contract)
     db_session.commit()
     db_session.refresh(contract)
-    contract_id = contract.id  # ✅ scalaire
+    contract_id = contract.id
 
-    run_cli(
-        monkeypatch,
+    result = invoke_cli(
         [
             "events",
             "create",
@@ -145,14 +141,12 @@ def test_cli_events_create_and_list(monkeypatch, tmp_path, capsys, db_session):
             "120",
             "--notes",
             "Conf",
-        ],
+        ]
     )
-    main()
-    out = capsys.readouterr().out
-    assert "✅ Événement créé" in out
+    assert result.exit_code == 0
+    assert "✅ Événement créé" in result.output
 
-    run_cli(monkeypatch, ["events", "list"])
-    main()
-    out = capsys.readouterr().out
-    assert "📋 Événements" in out
-    assert "Paris" in out
+    result = invoke_cli(["events", "list"])
+    assert result.exit_code == 0
+    assert "Événements" in result.output
+    assert str(contract_id) in result.output

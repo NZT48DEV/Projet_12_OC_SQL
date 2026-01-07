@@ -4,6 +4,7 @@ import argparse
 
 import sentry_sdk
 
+from app.cli.console import error, info, success
 from app.core.jwt_service import TokenError, create_token_pair, refresh_access_token
 from app.core.token_store import clear_tokens, load_refresh_token, save_tokens
 from app.db.session import get_session
@@ -24,17 +25,17 @@ def cmd_login(args: argparse.Namespace) -> None:
         )
         save_tokens(token_pair.access_token, token_pair.refresh_token)
 
-        print(
-            f"✅ Connecté : {employee.first_name} {employee.last_name} "
+        success(
+            f"Connecté : {employee.first_name} {employee.last_name} "
             f"(role={employee.role})"
         )
-        print("ℹ️  Access token valide 20 minutes.")
-        print("ℹ️  Utilise `refresh-token` si le token expire.")
+        info("Access token valide 20 minutes.")
+        info("Utilise `refresh-token` si le token expire.")
     except AuthenticationError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur inattendue lors du login : {exc}")
+        error(f"Erreur inattendue lors du login : {exc}")
     finally:
         session.close()
 
@@ -42,14 +43,14 @@ def cmd_login(args: argparse.Namespace) -> None:
 def cmd_logout(_: argparse.Namespace) -> None:
     """Supprime les tokens locaux (déconnexion)."""
     clear_tokens()
-    print("✅ Déconnecté.")
+    success("Déconnecté.")
 
 
 def cmd_refresh_token(_: argparse.Namespace) -> None:
     """Régénère un access token via le refresh token local."""
     refresh_token = load_refresh_token()
     if not refresh_token:
-        print("❌ Aucun refresh token trouvé. Faites `login`.")
+        error("Aucun refresh token trouvé. Faites `login`.")
         return
 
     try:
@@ -59,13 +60,13 @@ def cmd_refresh_token(_: argparse.Namespace) -> None:
             rotate_refresh=True,
         )
         save_tokens(token_pair.access_token, token_pair.refresh_token)
-        print("✅ Token rafraîchi avec succès.")
+        success("Token rafraîchi avec succès.")
     except TokenError as exc:
-        print(f"❌ Impossible de rafraîchir le token : {exc}")
-        print("➡️ Faites `login`.")
+        error(f"Impossible de rafraîchir le token : {exc}")
+        info("Faites `login`.")
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur inattendue lors du refresh token : {exc}")
+        error(f"Erreur inattendue lors du refresh token : {exc}")
 
 
 def cmd_whoami(_: argparse.Namespace) -> None:
@@ -73,11 +74,11 @@ def cmd_whoami(_: argparse.Namespace) -> None:
     session = get_session()
     try:
         employee = get_current_employee(session)
-        print(
+        info(
             f"👤 {employee.first_name} {employee.last_name} "
             f"(email={employee.email}, role={employee.role})"
         )
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(f"❌ {exc}")
     finally:
         session.close()

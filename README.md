@@ -12,6 +12,7 @@ Ce projet met en place une **architecture back-end robuste** avec Python et Post
 - le principe du moindre privilège,
 - un ORM (SQLAlchemy),
 - des migrations versionnées (Alembic),
+- une CLI moderne avec **Click** et **Rich**,
 - et de bonnes pratiques de qualité logicielle.
 
 ---
@@ -124,7 +125,7 @@ python -m app.epicevents clients list
 
 ---
 
-### ERD : [`docs/erd.mmd`](docs/erd.mmd)
+### Modélisation - ERD : [`docs/erd.mmd`](docs/erd.mmd)
 - Diagramme ERD illustrant la structure relationnelle de la base de données du projet Epic Events.
 
 ---

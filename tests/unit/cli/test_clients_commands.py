@@ -16,7 +16,7 @@ def test_cmd_clients_list_empty(monkeypatch, capsys, dummy_session_rb):
     clients_cmds.cmd_clients_list(SimpleNamespace())
     out = capsys.readouterr().out
 
-    assert "ℹ️  Aucun client trouvé." in out
+    assert "Aucun client trouvé." in out
     assert dummy_session_rb.closed is True
 
 
@@ -40,9 +40,12 @@ def test_cmd_clients_list_prints(monkeypatch, capsys, dummy_session_rb):
     clients_cmds.cmd_clients_list(SimpleNamespace())
     out = capsys.readouterr().out
 
-    assert "📋 Clients" in out
-    assert "id=1" in out
-    assert "sales_contact_id=10" in out
+    assert "Clients" in out
+    assert "John" in out
+    assert "Doe" in out
+    assert "j@test.com" in out
+    assert "ACME" in out
+    assert "10" in out
     assert dummy_session_rb.closed is True
 
 
