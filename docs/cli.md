@@ -1,7 +1,13 @@
 # Commandes CLI — Epic Events CRM
 
-> Toutes les commandes se lancent via :
-> `python -m app.epicevents ...`
+Toutes les commandes s’exécutent via la CLI :
+
+```bash
+epicevents <commande> [options]
+```
+
+L’interface CLI est construite avec **Click** (structure, parsing) et **Rich**
+(affichage en tables, messages colorés).
 
 ---
 
@@ -9,205 +15,160 @@
 
 ### Connexion
 ```bash
-python -m app.epicevents login <email> <password>
+epicevents login <email> <password>
 ```
 
 ### Utilisateur courant
 ```bash
-python -m app.epicevents whoami
+epicevents whoami
 ```
 
 ### Rafraîchir le token
 ```bash
-python -m app.epicevents refresh-token
+epicevents refresh-token
 ```
 
 ### Déconnexion
 ```bash
-python -m app.epicevents logout
+epicevents logout
 ```
 
 ---
 
 ## 👥 Employés
 
-### Créer un employé
+### Créer un employé (bootstrap)
 ```bash
-python -m app.epicevents create-employee <first_name> <last_name> <email> <password> <ROLE>
+epicevents create-employee <first_name> <last_name> <email> <password> <ROLE>
 ```
-Rôles possibles : `MANAGEMENT`, `SALES`, `SUPPORT`
+Rôles possibles : `MANAGEMENT`, `SALES`, `SUPPORT`.
+
+⚠️ Le tout premier employé doit obligatoirement être `MANAGEMENT`.
 
 ---
 
 ### Lister les employés
 ```bash
-python -m app.epicevents employees list
-python -m app.epicevents employees list --role MANAGEMENT
-python -m app.epicevents employees list --role SALES
-python -m app.epicevents employees list --role SUPPORT
+epicevents employees list
+epicevents employees list --role SALES
 ```
 
 ---
 
 ### Désactiver un employé (soft delete)
 ```bash
-python -m app.epicevents employees deactivate <employee_id>
+epicevents employees deactivate <employee_id>
 ```
 
 ### Réactiver un employé
 ```bash
-python -m app.epicevents employees reactivate <employee_id>
+epicevents employees reactivate <employee_id>
 ```
 
 ---
 
-### Supprimer un employé (suppression contrôlée)
+### Supprimer un employé
+
+#### Soft delete (par défaut)
 ```bash
-python -m app.epicevents employees delete <employee_id>
+epicevents employees delete <employee_id>
 ```
 
-**Suppression** uniquement si aucune référence n’existe
-
-**Refus** si l’employé est encore lié à :
-- un client
-- un contrat
-- un événement
-
----
-
-### Supprimer définitivement un employé (HARD DELETE ⚠️)
+#### Hard delete ⚠️ (irréversible)
 ```bash
-python -m app.epicevents employees delete <employee_id> --hard --confirm <employee_id>
+epicevents employees delete <employee_id> --hard --confirm <employee_id>
 ```
-⚠️ **Action irréversible** :
-- supprime définitivement l’employé
-- échoue si des entités (clients / contrats / events) sont encore référencées
+
+Échoue si l’employé est encore référencé par des clients, contrats ou événements.
 
 ---
 
 ## 🧑‍💼 Clients
 
-### Lister les clients
+### Lister
 ```bash
-python -m app.epicevents clients list
+epicevents clients list
 ```
 
-### Créer un client (SALES)
+### Créer (SALES)
 ```bash
-python -m app.epicevents clients create <first_name> <last_name> <email>   [--phone <phone>] [--company-name <company_name>]
+epicevents clients create <first_name> <last_name> <email>   [--phone <phone>] [--company-name <company>]
 ```
 
----
-
-### Mettre à jour un client
+### Mettre à jour
 ```bash
-python -m app.epicevents clients update <client_id>   [--first-name <first_name>]   [--last-name <last_name>]   [--email <email>]   [--phone <phone>]   [--company-name <company_name>]
+epicevents clients update <client_id> [options]
 ```
 
-Règles :
-- `SUPPORT` ❌ interdit
-- `SALES` ✔ uniquement ses clients
-- `MANAGEMENT` ✔ tous les clients
-
----
-
-### Réassigner un client (MANAGEMENT)
+### Réassigner (MANAGEMENT)
 ```bash
-python -m app.epicevents clients reassign <client_id> <sales_contact_id>
+epicevents clients reassign <client_id> <sales_contact_id>
 ```
-➡️ Réassigne le client **et tous ses contrats** au nouveau commercial.
 
 ---
 
 ## 🧾 Contrats
 
-### Lister les contrats
+### Lister
 ```bash
-python -m app.epicevents contracts list
+epicevents contracts list
 ```
 
----
-
-### Créer un contrat (MANAGEMENT)
+### Créer (MANAGEMENT)
 ```bash
-python -m app.epicevents contracts create <client_id> <total_amount> <amount_due> [--signed]
+epicevents contracts create <client_id> <total> <amount_due> [--signed]
 ```
 
----
-
-### Signer un contrat (MANAGEMENT)
+### Signer
 ```bash
-python -m app.epicevents contracts sign <contract_id>
+epicevents contracts sign <contract_id>
 ```
 
----
-
-### Mettre à jour un contrat
+### Mettre à jour
 ```bash
-python -m app.epicevents contracts update <contract_id>   [--total <total_amount>]   [--amount-due <amount_due>]
+epicevents contracts update <contract_id> [options]
 ```
 
-Règles :
-- `SALES` ✔ uniquement ses contrats
-- `MANAGEMENT` ✔ tous
-
----
-
-### Réassigner un contrat
+### Réassigner
 ```bash
-python -m app.epicevents contracts reassign <contract_id> <sales_contact_id>
+epicevents contracts reassign <contract_id> <sales_contact_id>
 ```
-Règles :
-- `SALES` ✔ uniquement ses contrats
-- `MANAGEMENT` ✔ tous
 
 ---
 
 ## 📅 Événements
 
-### Lister les événements
+### Lister
 ```bash
-python -m app.epicevents events list
+epicevents events list
 ```
 
----
-
-### Créer un événement (SALES, contrat signé requis)
+### Créer (SALES, contrat signé requis)
 ```bash
-python -m app.epicevents events create <client_id> <contract_id>   <start_date> <start_time> <end_date> <end_time>   <location> <attendees> [--notes <notes>]
+epicevents events create <client_id> <contract_id>   <start_date> <start_time> <end_date> <end_time>   <location> <attendees> [--notes <notes>]
 ```
 
 Formats :
-- Dates : `YYYY-MM-DD`
-- Heures : `HH:MM`
+- Date : `YYYY-MM-DD`
+- Heure : `HH:MM`
 
----
-
-### Mettre à jour un événement
+### Mettre à jour
 ```bash
-python -m app.epicevents events update <event_id>   [--start-date YYYY-MM-DD --start-time HH:MM]   [--end-date YYYY-MM-DD --end-time HH:MM]   [--location <location>]   [--attendees <attendees>]   [--notes <notes>]   [--support-contact-id <employee_id>]
+epicevents events update <event_id> [options]
 ```
 
-Règles :
-- `SUPPORT` ✔ uniquement ses événements
-- `MANAGEMENT` ✔ tous
-- `SALES` ❌ interdit
-
----
-
-### Réassigner le support d’un événement (MANAGEMENT)
+### Réassigner le support (MANAGEMENT)
 ```bash
-python -m app.epicevents events reassign <event_id> --support-contact-id <support_employee_id>
+epicevents events reassign <event_id> --support-contact-id <support_id>
 ```
 
 ---
 
-## 🛡️ Récapitulatif des permissions
+## 🛡️ Permissions (récap)
 
 | Action | MANAGEMENT | SALES | SUPPORT |
 |------|-----------|-------|---------|
 | Créer employé | ✔ | ❌ | ❌ |
-| Réassigner client | ✔ | ❌ | ❌ |
-| Réassigner contrat | ✔ | ✔ (si propriétaire) | ❌ |
-| Réassigner event | ✔ | ❌ | ❌ |
-| Modifier event | ✔ | ❌ | ✔ (si assigné) |
+| Gérer clients | ✔ | ✔ (si propriétaire) | ❌ |
+| Gérer contrats | ✔ | ✔ (si propriétaire) | ❌ |
+| Gérer événements | ✔ | ❌ | ✔ (si assigné) |

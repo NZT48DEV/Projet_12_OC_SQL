@@ -1,3 +1,18 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epic-events-crm"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[project.scripts]
+epicevents = "app.epicevents:cli"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
 [tool.black]
 line-length = 88
 target-version = ["py311"]

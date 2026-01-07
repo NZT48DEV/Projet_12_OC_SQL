@@ -2,21 +2,12 @@ from __future__ import annotations
 
 from app.core import jwt_service, token_store
 from app.core.security import hash_password
-from app.epicevents import main
 from app.models.employee import Employee, Role
-
-
-def run_cli(monkeypatch, args: list[str]) -> None:
-    """Simule sys.argv pour exécuter une commande CLI."""
-    monkeypatch.setattr("sys.argv", ["epicevents"] + args)
+from tests.integration.cli._click_runner import invoke_cli
 
 
 def patch_sessions(monkeypatch, db_session) -> None:
-    """
-    Force les modules de commandes CLI à utiliser la session de test.
-    IMPORTANT: après refactor, get_session est importé directement dans chaque module
-    (from app.db.session import get_session), donc il faut patcher ces modules-là.
-    """
+    """Force les modules de commandes CLI à utiliser la session de test."""
     monkeypatch.setattr("app.cli.commands.auth.get_session", lambda: db_session)
     monkeypatch.setattr("app.cli.commands.employees.get_session", lambda: db_session)
     monkeypatch.setattr("app.cli.commands.clients.get_session", lambda: db_session)
@@ -25,7 +16,7 @@ def patch_sessions(monkeypatch, db_session) -> None:
 
 
 def patch_init_db(monkeypatch) -> None:
-    """Désactive init_db() pendant les tests CLI pour éviter les effets de bord."""
+    """Désactive init_db() pendant les tests CLI."""
     monkeypatch.setattr("app.epicevents.init_db", lambda: None)
 
 
@@ -50,20 +41,13 @@ def test_cli_whoami_not_authenticated(monkeypatch, tmp_path, capsys, db_session)
     """whoami affiche un message si aucun token n'est présent."""
     patch_init_db(monkeypatch)
 
-    # 1) Force le mode fallback fichier (keyring désactivé)
     monkeypatch.setattr(token_store, "keyring", None)
-
-    # 2) Tokens fallback dans tmp_path (vide)
     patch_tokens(monkeypatch, tmp_path)
-
-    # 3) Session DB mockée
     patch_sessions(monkeypatch, db_session)
 
-    run_cli(monkeypatch, ["whoami"])
-    main()
-    out = capsys.readouterr().out
+    result = invoke_cli(["whoami"])
 
-    assert "Non authentifié" in out
+    assert "Non authentifié" in result.output
 
 
 def test_cli_login_success_saves_tokens(monkeypatch, tmp_path, capsys, db_session):
@@ -71,6 +55,7 @@ def test_cli_login_success_saves_tokens(monkeypatch, tmp_path, capsys, db_sessio
     patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
     patch_sessions(monkeypatch, db_session)
+    monkeypatch.setattr(token_store, "keyring", None)
 
     emp = Employee(
         first_name="Anthony",
@@ -83,11 +68,9 @@ def test_cli_login_success_saves_tokens(monkeypatch, tmp_path, capsys, db_sessio
     db_session.commit()
     db_session.refresh(emp)
 
-    run_cli(monkeypatch, ["login", "cli-login@example.com", "Secret123!"])
-    main()
-    out = capsys.readouterr().out
+    result = invoke_cli(["login", "cli-login@example.com", "Secret123!"])
 
-    assert "✅ Connecté" in out
+    assert "✅ Connecté" in result.output
     assert token_store.load_access_token() is not None
     assert token_store.load_refresh_token() is not None
 
@@ -97,6 +80,7 @@ def test_cli_whoami_with_valid_tokens(monkeypatch, tmp_path, capsys, db_session)
     patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
     patch_sessions(monkeypatch, db_session)
+    monkeypatch.setattr(token_store, "keyring", None)
 
     emp = Employee(
         first_name="Anthony",
@@ -111,12 +95,10 @@ def test_cli_whoami_with_valid_tokens(monkeypatch, tmp_path, capsys, db_session)
 
     seed_tokens(monkeypatch, tmp_path, emp.id)
 
-    run_cli(monkeypatch, ["whoami"])
-    main()
-    out = capsys.readouterr().out
+    result = invoke_cli(["whoami"])
 
-    assert emp.email in out
-    assert "SUPPORT" in out
+    assert emp.email in result.output
+    assert "SUPPORT" in result.output
 
 
 def test_cli_whoami_employee_missing(monkeypatch, tmp_path, capsys, db_session):
@@ -124,29 +106,28 @@ def test_cli_whoami_employee_missing(monkeypatch, tmp_path, capsys, db_session):
     patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
     patch_sessions(monkeypatch, db_session)
+    monkeypatch.setattr(token_store, "keyring", None)
 
     seed_tokens(monkeypatch, tmp_path, employee_id=999999999)
 
-    run_cli(monkeypatch, ["whoami"])
-    main()
-    out = capsys.readouterr().out
+    result = invoke_cli(["whoami"])
 
-    assert "Utilisateur introuvable" in out or "Non authentifié" in out
+    assert (
+        "Utilisateur introuvable" in result.output or "Non authentifié" in result.output
+    )
 
 
 def test_cli_logout_clears_tokens(monkeypatch, tmp_path, capsys):
     """logout supprime les tokens locaux."""
     patch_init_db(monkeypatch)
     patch_tokens(monkeypatch, tmp_path)
+    monkeypatch.setattr(token_store, "keyring", None)
 
-    # On seed un fichier tokens.json
     seed_tokens(monkeypatch, tmp_path, employee_id=1)
     assert token_store.load_access_token() is not None
 
-    run_cli(monkeypatch, ["logout"])
-    main()
-    out = capsys.readouterr().out
+    result = invoke_cli(["logout"])
 
-    assert "Déconnecté" in out
+    assert "Déconnecté" in result.output
     assert token_store.load_access_token() is None
     assert token_store.load_refresh_token() is None
