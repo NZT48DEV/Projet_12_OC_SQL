@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3977417cba3a88bc9594e1dfa875375456e8185304bfa4953051fec8b1bfe1c5"
+            "sha256": "e494cc23ab174a91509f52626a704f291bb418bc72af651d90842bcc72e284ad"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -172,6 +172,23 @@
             "markers": "python_version >= '3.9'",
             "version": "==2.0.0"
         },
+        "click": {
+            "hashes": [
+                "sha256:12ff4785d337a1bb490bb7e9c2b1ee5da3112e94a8622f26a6c77f5d2fc6842a",
+                "sha256:981153a64e25f12d547d3426c367a4857371575ee7ad18df2a6183ab0545b2a6"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.10'",
+            "version": "==8.3.1"
+        },
+        "colorama": {
+            "hashes": [
+                "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44",
+                "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"
+            ],
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6'",
+            "version": "==0.4.6"
+        },
         "greenlet": {
             "hashes": [
                 "sha256:047ab3df20ede6a57c35c14bf5200fcf04039d50f908270d3f9a7a82064f543b",
@@ -275,6 +292,14 @@
             "markers": "python_version >= '3.8'",
             "version": "==1.3.10"
         },
+        "markdown-it-py": {
+            "hashes": [
+                "sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147",
+                "sha256:cb0a2b4aa34f932c007117b194e945bd74e0ec24133ceb5bac59009cda1cb9f3"
+            ],
+            "markers": "python_version >= '3.10'",
+            "version": "==4.0.0"
+        },
         "markupsafe": {
             "hashes": [
                 "sha256:0303439a41979d9e74d18ff5e2dd8c43ed6c6001fd40e5bf2e43f7bd9bbc523f",
@@ -369,6 +394,14 @@
             ],
             "markers": "python_version >= '3.9'",
             "version": "==3.0.3"
+        },
+        "mdurl": {
+            "hashes": [
+                "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
+                "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"
+            ],
+            "markers": "python_version >= '3.7'",
+            "version": "==0.1.2"
         },
         "more-itertools": {
             "hashes": [
@@ -469,6 +502,14 @@
             "markers": "python_version >= '3.8'",
             "version": "==2.23"
         },
+        "pygments": {
+            "hashes": [
+                "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887",
+                "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b"
+            ],
+            "markers": "python_version >= '3.8'",
+            "version": "==2.19.2"
+        },
         "pyjwt": {
             "hashes": [
                 "sha256:3cc5772eb20009233caf06e9d8a0577824723b44e6648ee0a2aedb6cf9381953",
@@ -494,6 +535,15 @@
             ],
             "markers": "python_version >= '3.6'",
             "version": "==0.2.3"
+        },
+        "rich": {
+            "hashes": [
+                "sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4",
+                "sha256:76bc51fe2e57d2b1be1f96c524b890b816e334ab4c1e45888799bfaab0021edd"
+            ],
+            "index": "pypi",
+            "markers": "python_full_version >= '3.8.0'",
+            "version": "==14.2.0"
         },
         "sentry-sdk": {
             "hashes": [
@@ -839,11 +889,11 @@
         },
         "pathspec": {
             "hashes": [
-                "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08",
-                "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712"
+                "sha256:8870061f22c58e6d83463cfce9a7dd6eca0512c772c1001fb09ac64091816721",
+                "sha256:e2769b508d0dd47b09af6ee2c75b2744a2cb1f474ae4b1494fd6a1b7a841613c"
             ],
-            "markers": "python_version >= '3.8'",
-            "version": "==0.12.1"
+            "markers": "python_version >= '3.9'",
+            "version": "==1.0.1"
         },
         "platformdirs": {
             "hashes": [

@@ -63,7 +63,7 @@ def test_cli_clients_create_and_list(monkeypatch, tmp_path, capsys, db_session):
     run_cli(monkeypatch, ["clients", "list"])
     main()
     out = capsys.readouterr().out
-    assert "📋 Clients" in out
+    assert "Clients" in out
     assert "jean@test.com" in out
 
 
@@ -82,7 +82,7 @@ def test_cli_contracts_create_and_list(monkeypatch, tmp_path, capsys, db_session
     db_session.add(client)
     db_session.commit()
     db_session.refresh(client)
-    client_id = client.id  # ✅ garder un scalaire (évite DetachedInstanceError)
+    client_id = client.id
 
     seed_tokens(monkeypatch, tmp_path, mgmt.id)
 
@@ -97,8 +97,8 @@ def test_cli_contracts_create_and_list(monkeypatch, tmp_path, capsys, db_session
     run_cli(monkeypatch, ["contracts", "list"])
     main()
     out = capsys.readouterr().out
-    assert "📋 Contrats" in out
-    assert f"client_id={client_id}" in out
+    assert "Contrats" in out
+    assert str(client_id) in out
 
 
 def test_cli_events_create_and_list(monkeypatch, tmp_path, capsys, db_session):
@@ -116,7 +116,7 @@ def test_cli_events_create_and_list(monkeypatch, tmp_path, capsys, db_session):
     db_session.add(client)
     db_session.commit()
     db_session.refresh(client)
-    client_id = client.id  # ✅ scalaire
+    client_id = client.id
 
     contract = Contract(
         client_id=client_id,
@@ -128,7 +128,7 @@ def test_cli_events_create_and_list(monkeypatch, tmp_path, capsys, db_session):
     db_session.add(contract)
     db_session.commit()
     db_session.refresh(contract)
-    contract_id = contract.id  # ✅ scalaire
+    contract_id = contract.id
 
     run_cli(
         monkeypatch,
@@ -154,5 +154,5 @@ def test_cli_events_create_and_list(monkeypatch, tmp_path, capsys, db_session):
     run_cli(monkeypatch, ["events", "list"])
     main()
     out = capsys.readouterr().out
-    assert "📋 Événements" in out
-    assert "Paris" in out
+    assert "Événements" in out
+    assert str(contract_id) in out

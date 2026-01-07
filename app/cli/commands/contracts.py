@@ -4,7 +4,9 @@ import argparse
 from decimal import Decimal
 
 import sentry_sdk
+from rich.table import Table
 
+from app.cli.console import console, error, forbidden, info, success
 from app.core.authorization import AuthorizationError, require_role
 from app.db.session import get_session
 from app.models.employee import Role
@@ -22,35 +24,49 @@ from app.services.current_employee import NotAuthenticatedError, get_current_emp
 
 
 def cmd_contracts_list(_: argparse.Namespace) -> None:
+    """Liste les contrats accessibles à l'utilisateur courant."""
     session = get_session()
     try:
         employee = get_current_employee(session)
         contracts = list_contracts(session=session, current_employee=employee)
 
         if not contracts:
-            print("ℹ️  Aucun contrat trouvé.")
+            info("Aucun contrat trouvé.")
             return
 
-        print("📋 Contrats :")
+        table = Table(title="Contrats")
+
+        table.add_column("ID", justify="right", no_wrap=True)
+        table.add_column("Client ID", justify="right")
+        table.add_column("Sales ID", justify="right")
+        table.add_column("Total", justify="right")
+        table.add_column("À payer", justify="right")
+        table.add_column("Signé", justify="center")
+
         for ct in contracts:
-            print(
-                f"- id={ct.id} | client_id={ct.client_id} | "
-                f"sales_contact_id={ct.sales_contact_id} | "
-                f"total={ct.total_amount} | due={ct.amount_due} | "
-                f"signed={ct.is_signed}"
+            table.add_row(
+                str(ct.id),
+                str(ct.client_id),
+                str(ct.sales_contact_id) if ct.sales_contact_id is not None else "",
+                str(ct.total_amount),
+                str(ct.amount_due),
+                "✅" if ct.is_signed else "❌",
             )
 
+        table.caption = f"{len(contracts)} contrat(s)"
+        console.print(table)
+
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la récupération des contrats : {exc}")
-
+        error(f"Erreur lors de la récupération des contrats : {exc}")
     finally:
         session.close()
 
 
 def cmd_contracts_create(args: argparse.Namespace) -> None:
+    """Crée un nouveau contrat."""
     session = get_session()
     try:
         employee = get_current_employee(session)
@@ -64,8 +80,8 @@ def cmd_contracts_create(args: argparse.Namespace) -> None:
             is_signed=args.signed,
         )
 
-        print(
-            "✅ Contrat créé : "
+        success(
+            "Contrat créé : "
             f"id={contract.id} | client_id={contract.client_id} | "
             f"sales_contact_id={contract.sales_contact_id} | "
             f"total={contract.total_amount} | due={contract.amount_due} | "
@@ -73,26 +89,26 @@ def cmd_contracts_create(args: argparse.Namespace) -> None:
         )
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"⛔ Accès refusé : {exc}")
+        forbidden(f"Accès refusé : {exc}")
     except ValidationError as exc:
-        print(f"❌ Données invalides : {exc}")
+        error(f"Données invalides : {exc}")
     except NotFoundError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la création du contrat : {exc}")
+        error(f"Erreur lors de la création du contrat : {exc}")
     finally:
         session.close()
 
 
 def cmd_contracts_sign(args: argparse.Namespace) -> None:
+    """Signe un contrat (réservé MANAGEMENT)."""
     session = get_session()
     try:
         current_employee = get_current_employee(session)
-
         require_role(current_employee.role, allowed={Role.MANAGEMENT})
 
         contract = sign_contract(
@@ -101,27 +117,26 @@ def cmd_contracts_sign(args: argparse.Namespace) -> None:
             contract_id=args.contract_id,
         )
 
-        print(f"✅ Contrat {contract.id} signé.")
+        success(f"Contrat {contract.id} signé.")
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
-    except AuthorizationError as exc:
-        print(f"⛔ {exc}")
-    except PermissionDeniedError as exc:
-        print(f"⛔ {exc}")
+        error(str(exc))
+    except (AuthorizationError, PermissionDeniedError) as exc:
+        forbidden(str(exc))
     except NotFoundError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except ValidationError as exc:
-        print(f"⚠️ {exc}")
+        info(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la signature du contrat : {exc}")
+        error(f"Erreur lors de la signature du contrat : {exc}")
     finally:
         session.close()
 
 
 def cmd_contracts_update(args: argparse.Namespace) -> None:
+    """Met à jour les montants d'un contrat."""
     session = get_session()
     try:
         employee = get_current_employee(session)
@@ -139,7 +154,7 @@ def cmd_contracts_update(args: argparse.Namespace) -> None:
             amount_due=amount_due,
         )
 
-        print(
+        success(
             "Contrat mis à jour : "
             f"id={contract.id} | client_id={contract.client_id} | "
             f"total={contract.total_amount} | amount_due={contract.amount_due} | "
@@ -147,22 +162,23 @@ def cmd_contracts_update(args: argparse.Namespace) -> None:
         )
 
     except NotAuthenticatedError as exc:
-        print(f"Erreur : {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"Accès refusé : {exc}")
+        forbidden(str(exc))
     except NotFoundError as exc:
-        print(f"Erreur : {exc}")
+        error(str(exc))
     except ValidationError as exc:
-        print(f"Données invalides : {exc}")
+        error(f"Données invalides : {exc}")
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"Erreur lors de la mise à jour du contrat : {exc}")
+        error(f"Erreur lors de la mise à jour du contrat : {exc}")
     finally:
         session.close()
 
 
 def cmd_contracts_reassign(args: argparse.Namespace) -> None:
+    """Réassigne un contrat à un autre commercial."""
     session = get_session()
     try:
         employee = get_current_employee(session)
@@ -174,20 +190,20 @@ def cmd_contracts_reassign(args: argparse.Namespace) -> None:
             new_sales_contact_id=args.sales_contact_id,
         )
 
-        print(
-            "✅ Contrat réassigné : "
+        success(
+            "Contrat réassigné : "
             f"id={contract.id} | sales_contact_id={contract.sales_contact_id}"
         )
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"⛔ Accès refusé : {exc}")
+        forbidden(str(exc))
     except (ValidationError, NotFoundError) as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la réassignation du contrat : {exc}")
+        error(f"Erreur lors de la réassignation du contrat : {exc}")
     finally:
         session.close()

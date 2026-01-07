@@ -210,7 +210,9 @@ def test_cmd_employees_list_empty(monkeypatch, capsys, dummy_session_rb):
     """employees list: affiche 'Aucun employé trouvé.' si vide."""
     monkeypatch.setattr(employees_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
-        employees_cmds, "get_current_employee", lambda _s: SimpleNamespace()
+        employees_cmds,
+        "get_current_employee",
+        lambda _s: SimpleNamespace(role=Role.SALES),
     )
 
     repo = SimpleNamespace(list_all=lambda: [])
@@ -224,16 +226,26 @@ def test_cmd_employees_list_empty(monkeypatch, capsys, dummy_session_rb):
 
 
 def test_cmd_employees_list_prints(monkeypatch, capsys, dummy_session_rb):
-    """employees list: affiche la liste des employés."""
+    """employees list: affiche la table des employés."""
     monkeypatch.setattr(employees_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
-        employees_cmds, "get_current_employee", lambda _s: SimpleNamespace()
+        employees_cmds,
+        "get_current_employee",
+        lambda _s: SimpleNamespace(role=Role.SALES),
     )
 
     repo = SimpleNamespace(
         list_all=lambda: [
             SimpleNamespace(
-                id=1, email="a@test.com", role=SimpleNamespace(value="SALES")
+                id=1,
+                first_name="A",
+                last_name="B",
+                email="a@test.com",
+                role=SimpleNamespace(value="SALES"),
+                is_active=True,
+                created_at=None,
+                deactivated_at=None,
+                reactivated_at=None,
             )
         ]
     )
@@ -242,23 +254,35 @@ def test_cmd_employees_list_prints(monkeypatch, capsys, dummy_session_rb):
     employees_cmds.cmd_employees_list(SimpleNamespace(role=None))
     out = capsys.readouterr().out
 
-    assert "Employés :" in out
-    assert "email=a@test.com" in out
+    assert "Employés" in out
+    assert "a@test.com" in out
+    assert "SALES" in out
+    assert "Actif" in out
     assert dummy_session_rb.closed is True
 
 
 def test_cmd_employees_list_with_role_filter(monkeypatch, capsys, dummy_session_rb):
-    """employees list --role: appelle list_by_role."""
+    """employees list --role: appelle list_by_role et affiche le résultat."""
     monkeypatch.setattr(employees_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
-        employees_cmds, "get_current_employee", lambda _s: SimpleNamespace()
+        employees_cmds,
+        "get_current_employee",
+        lambda _s: SimpleNamespace(role=Role.SALES),
     )
     monkeypatch.setattr(employees_cmds, "Role", Role)
 
     repo = SimpleNamespace(
         list_by_role=lambda _role: [
             SimpleNamespace(
-                id=2, email="b@test.com", role=SimpleNamespace(value="SUPPORT")
+                id=2,
+                first_name="B",
+                last_name="C",
+                email="b@test.com",
+                role=SimpleNamespace(value="SUPPORT"),
+                is_active=True,
+                created_at=None,
+                deactivated_at=None,
+                reactivated_at=None,
             )
         ]
     )
@@ -267,7 +291,9 @@ def test_cmd_employees_list_with_role_filter(monkeypatch, capsys, dummy_session_
     employees_cmds.cmd_employees_list(SimpleNamespace(role=Role.SUPPORT.name))
     out = capsys.readouterr().out
 
-    assert "email=b@test.com" in out
+    assert "Employés" in out
+    assert "b@test.com" in out
+    assert "SUPPORT" in out
     assert dummy_session_rb.closed is True
 
 

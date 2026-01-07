@@ -13,6 +13,8 @@ argon2-cffi = "*"
 pyjwt = "*"
 keyring = "*"
 sentry-sdk = "*"
+click = "*"
+rich = "*"
 
 [dev-packages]
 black = "*"

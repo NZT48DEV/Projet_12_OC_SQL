@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 
 import sentry_sdk
+from rich.table import Table
 
+from app.cli.console import console, error, forbidden, info, success
 from app.db.session import get_session
 from app.services.client_service import (
     ClientAlreadyExistsError,
@@ -19,33 +21,47 @@ from app.services.current_employee import NotAuthenticatedError, get_current_emp
 
 
 def cmd_clients_list(_: argparse.Namespace) -> None:
+    """Liste les clients accessibles à l'utilisateur courant."""
     session = get_session()
     try:
         employee = get_current_employee(session)
         clients = list_clients(session=session, current_employee=employee)
 
         if not clients:
-            print("ℹ️  Aucun client trouvé.")
+            info("Aucun client trouvé.")
             return
 
-        print("📋 Clients :")
+        table = Table(title="Clients")
+
+        table.add_column("ID", justify="right", no_wrap=True)
+        table.add_column("Nom")
+        table.add_column("Email")
+        table.add_column("Entreprise")
+        table.add_column("Sales ID", justify="right")
+
         for c in clients:
-            print(
-                f"- id={c.id} | {c.first_name} | {c.last_name} | {c.email} | "
-                f"company={c.company_name} | sales_contact_id={c.sales_contact_id}"
+            table.add_row(
+                str(c.id),
+                f"{c.first_name} {c.last_name}",
+                c.email,
+                c.company_name or "",
+                str(c.sales_contact_id) if c.sales_contact_id is not None else "",
             )
 
+        table.caption = f"{len(clients)} client(s)"
+        console.print(table)
+
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la récupération des clients : {exc}")
-
+        error(f"Erreur lors de la récupération des clients : {exc}")
     finally:
         session.close()
 
 
 def cmd_clients_create(args: argparse.Namespace) -> None:
+    """Crée un nouveau client."""
     session = get_session()
     try:
         employee = get_current_employee(session)
@@ -60,29 +76,30 @@ def cmd_clients_create(args: argparse.Namespace) -> None:
             company_name=args.company_name,
         )
 
-        print(
-            "✅ Client créé : "
+        success(
+            "Client créé : "
             f"id={client.id} | {client.first_name} {client.last_name} | {client.email} | "
             f"company={client.company_name} | sales_contact_id={client.sales_contact_id}"
         )
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"⛔ Accès refusé : {exc}")
+        forbidden(f"Accès refusé : {exc}")
     except ValidationError as exc:
-        print(f"❌ Données invalides : {exc}")
+        error(f"Données invalides : {exc}")
     except ClientAlreadyExistsError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la création du client : {exc}")
+        error(f"Erreur lors de la création du client : {exc}")
     finally:
         session.close()
 
 
 def cmd_clients_update(args: argparse.Namespace) -> None:
+    """Met à jour les informations d'un client."""
     session = get_session()
     try:
         employee = get_current_employee(session)
@@ -98,29 +115,30 @@ def cmd_clients_update(args: argparse.Namespace) -> None:
             company_name=args.company_name,
         )
 
-        print(
-            f"Client mis à jour : "
+        success(
+            "Client mis à jour : "
             f"id={client.id} | {client.first_name} {client.last_name} | {client.email} | "
             f"company={client.company_name} | sales_contact_id={client.sales_contact_id}"
         )
 
     except NotAuthenticatedError as exc:
-        print(f"Erreur : {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"Accès refusé : {exc}")
+        forbidden(f"Accès refusé : {exc}")
     except ValidationError as exc:
-        print(f"Données invalides : {exc}")
+        error(f"Données invalides : {exc}")
     except ClientAlreadyExistsError as exc:
-        print(f"Erreur : {exc}")
+        error(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"Erreur lors de la mise à jour du client : {exc}")
+        error(f"Erreur lors de la mise à jour du client : {exc}")
     finally:
         session.close()
 
 
 def cmd_clients_reassign(args: argparse.Namespace) -> None:
+    """Réassigne un client à un autre commercial."""
     session = get_session()
     try:
         employee = get_current_employee(session)
@@ -132,20 +150,20 @@ def cmd_clients_reassign(args: argparse.Namespace) -> None:
             new_sales_contact_id=args.sales_contact_id,
         )
 
-        print(
-            "✅ Client réassigné : "
+        success(
+            "Client réassigné : "
             f"id={client.id} | sales_contact_id={client.sales_contact_id}"
         )
 
     except NotAuthenticatedError as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except PermissionDeniedError as exc:
-        print(f"⛔ Accès refusé : {exc}")
+        forbidden(f"Accès refusé : {exc}")
     except (ValidationError, NotFoundError) as exc:
-        print(f"❌ {exc}")
+        error(str(exc))
     except Exception as exc:
         session.rollback()
         sentry_sdk.capture_exception(exc)
-        print(f"❌ Erreur lors de la réassignation du client : {exc}")
+        error(f"Erreur lors de la réassignation du client : {exc}")
     finally:
         session.close()
