@@ -42,7 +42,10 @@ jobs:
       EPICCRM_JWT_ROTATE_REFRESH: ${{ vars.EPICCRM_JWT_ROTATE_REFRESH }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -79,3 +82,5 @@ jobs:
         with:
           environment: production
           version: ${{ github.sha }}
+          set_commits: auto
+          ignore_missing: true
