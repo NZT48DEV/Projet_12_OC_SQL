@@ -33,13 +33,15 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
       DATABASE_URL_TEST: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
+
       EPICCRM_JWT_SECRET: ${{ secrets.EPICCRM_JWT_SECRET }}
-      SENTRY_DSN: ""
-      SENTRY_ENVIRONMENT: "ci"
       EPICCRM_JWT_ACCESS_MINUTES: ${{ vars.EPICCRM_JWT_ACCESS_MINUTES }}
       EPICCRM_JWT_REFRESH_DAYS: ${{ vars.EPICCRM_JWT_REFRESH_DAYS }}
       EPICCRM_JWT_ALG: ${{ vars.EPICCRM_JWT_ALG }}
       EPICCRM_JWT_ROTATE_REFRESH: ${{ vars.EPICCRM_JWT_ROTATE_REFRESH }}
+
+      SENTRY_DSN: ""
+      SENTRY_ENVIRONMENT: "ci"
 
     steps:
       - name: Checkout
@@ -67,18 +69,19 @@ jobs:
       - name: Apply migrations
         run: pipenv run alembic upgrade head
 
-      - name: Run pre-commit
-        run: pipenv run pre-commit run --all-files
+      - name: Run pre-commit (skip unit tests hook)
+        run: SKIP=pytest-unit pipenv run pre-commit run --all-files
 
       - name: Run tests (with coverage)
-        run: |
-          pipenv run pytest -q --cov=app --cov-report=xml --cov-report=term-missing
+        run: pipenv run pytest -q --cov=app --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
           fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 
       - name: Create Sentry release
