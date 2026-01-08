@@ -167,6 +167,22 @@ epicevents contracts reassign <contract_id> <sales_contact_id>
 epicevents events list
 ```
 
+#### Choisir l’affichage (colonnes)
+Par défaut, la vue **compact** est utilisée.
+
+```bash
+epicevents events list --view compact
+epicevents events list --view contact
+epicevents events list --view full
+```
+
+**Vues disponibles :**
+- `compact` : Event ID, Contrat ID, Client, Début, Fin, Lieu, Participants
+- `contact` : `compact` + Contact client (email + phone), Support
+- `full` : `contact` + Notes, Créé le, Modifié le
+
+---
+
 ### Créer (SALES, contrat signé requis)
 ```bash
 epicevents events create <client_id> <contract_id> <start_date> <start_time> <end_date> <end_time> <location> <attendees> [--notes <notes>]
@@ -175,6 +191,8 @@ epicevents events create <client_id> <contract_id> <start_date> <start_time> <en
 Formats :
 - Date : `YYYY-MM-DD`
 - Heure : `HH:MM`
+
+---
 
 ### Mettre à jour
 ```bash
@@ -195,6 +213,8 @@ epicevents events update <event_id> [options]
 | `--support-contact-id` | Assigner / modifier le support (id employé SUPPORT) |
 
 > ℹ️ Toutes les options sont facultatives, mais au moins **une option doit être fournie**.
+
+---
 
 ### Réassigner le support (MANAGEMENT)
 ```bash

@@ -1,9 +1,19 @@
 # Epic Events CRM
 **Back-end Python • PostgreSQL • SQLAlchemy • Alembic**
 
-![CI](https://github.com/NZT48DEV/Projet_12_OC_SQL/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-blue?logo=postgresql)
+![Migrations](https://img.shields.io/badge/migrations-Alembic-blueviolet)
+![ORM](https://img.shields.io/badge/ORM-SQLAlchemy-red)
+![CLI](https://img.shields.io/badge/CLI-Click%20%2B%20Rich-yellow)
+![Auth](https://img.shields.io/badge/auth-JWT-orange)
+![CI](https://github.com/NZT48DEV/Projet_12_OC_SQL/actions/workflows/ci.yml/badge.svg)
+![Tests](https://img.shields.io/badge/tests-pytest-green)
+![Coverage](https://codecov.io/gh/NZT48DEV/Projet_12_OC_SQL/branch/master/graph/badge.svg)
+![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
+![Linting](https://img.shields.io/badge/lint-flake8-blue)
+![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen)
+
 
 CRM interne sécurisé pour gérer les **clients**, **contrats** et **événements** d’Epic Events.
 
@@ -77,9 +87,9 @@ Ce mécanisme de bootstrap garantit qu’aucun compte non privilégié ne puisse
 
 ```bash
 alembic upgrade head
-python -m app.epicevents create-employee John Doe johndoe@test.com Secret123! MANAGEMENT
-python -m app.epicevents login johndoe@test.com Secret123!
-python -m app.epicevents clients list
+epicevents create-employee John Doe johndoe@test.com Secret123! MANAGEMENT
+epicevents login johndoe@test.com Secret123!
+epicevents clients list
 ```
 
 ---

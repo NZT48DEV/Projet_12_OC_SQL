@@ -268,8 +268,15 @@ def events() -> None:
 
 
 @events.command("list")
-def events_list() -> None:
-    cmd_events_list(Args())
+@click.option(
+    "--view",
+    type=click.Choice(["compact", "contact", "full"], case_sensitive=False),
+    default="compact",
+    show_default=True,
+    help="Choix de l'affichage (colonnes).",
+)
+def events_list(view: str) -> None:
+    cmd_events_list(Args(view=view))
 
 
 @events.command("create")

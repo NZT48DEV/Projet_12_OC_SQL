@@ -20,12 +20,70 @@ from app.services.event_service import (
 )
 
 
-def _fmt_dt(dt: datetime | None) -> str:
-    """Formate une date/heure pour affichage CLI."""
-    return dt.strftime("%d/%m/%Y %H:%M") if dt else "—"
+def _fmt_datetime(dt: datetime | None) -> str:
+    return dt.strftime("%d/%m/%y %H:%M") if dt else "—"
 
 
-def cmd_events_list(_: argparse.Namespace) -> None:
+def _fmt_event_dt(dt: datetime | None) -> str:
+    return dt.strftime("%d/%m/%y %H:%M") if dt else "—"
+
+
+# Colonnes disponibles (clé -> label)
+_COLUMNS = {
+    "event_id": "Event ID",
+    "contract_id": "Contrat ID",
+    "client_name": "Client",
+    "client_contact": "Contact client",
+    "start": "Début",
+    "end": "Fin",
+    "support_name": "Support",
+    "location": "Lieu",
+    "attendees": "Participants",
+    "notes": "Notes",
+    "created_at": "Créé le",
+    "updated_at": "Modifié le",
+}
+
+# Presets de vues
+_VIEWS = {
+    "compact": [
+        "event_id",
+        "contract_id",
+        "client_name",
+        "start",
+        "end",
+        "location",
+        "attendees",
+    ],
+    "contact": [
+        "event_id",
+        "contract_id",
+        "client_name",
+        "client_contact",
+        "start",
+        "end",
+        "support_name",
+        "location",
+        "attendees",
+    ],
+    "full": [
+        "event_id",
+        "contract_id",
+        "client_name",
+        "client_contact",
+        "start",
+        "end",
+        "support_name",
+        "location",
+        "attendees",
+        "notes",
+        "created_at",
+        "updated_at",
+    ],
+}
+
+
+def cmd_events_list(args: argparse.Namespace) -> None:
     """Liste les événements accessibles à l'utilisateur courant."""
     session = get_session()
     try:
@@ -36,28 +94,63 @@ def cmd_events_list(_: argparse.Namespace) -> None:
             info("Aucun événement trouvé.")
             return
 
-        table = Table(title="Événements")
+        view = (getattr(args, "view", None) or "compact").lower()
+        columns = _VIEWS.get(view, _VIEWS["compact"])
 
-        table.add_column("ID", justify="right", no_wrap=True)
-        table.add_column("Client ID", justify="right")
-        table.add_column("Contrat ID", justify="right")
-        table.add_column("Support ID", justify="right")
-        table.add_column("Début", no_wrap=True)
-        table.add_column("Fin", no_wrap=True)
-        table.add_column("Lieu")
-        table.add_column("Participants", justify="right")
+        table = Table(title=f"Événements ({view})")
+
+        # Ajout dynamique des colonnes
+        for col in columns:
+            label = _COLUMNS[col]
+            if col in {"event_id", "contract_id", "attendees"}:
+                table.add_column(label, justify="right", no_wrap=True)
+            else:
+                table.add_column(label)
 
         for ev in events:
-            table.add_row(
-                str(ev.id),
-                str(ev.client_id) if ev.client_id is not None else "",
-                str(ev.contract_id) if ev.contract_id is not None else "",
-                str(ev.support_contact_id) if ev.support_contact_id is not None else "",
-                _fmt_dt(ev.start_date),
-                _fmt_dt(ev.end_date),
-                ev.location or "",
-                str(ev.attendees) if ev.attendees is not None else "",
-            )
+            client = getattr(ev, "client", None)
+            support = getattr(ev, "support_contact", None)
+
+            client_name = "—"
+            client_contact = "—"
+            if client:
+                first = getattr(client, "first_name", "") or ""
+                last = getattr(client, "last_name", "") or ""
+                client_name = f"{first} {last}".strip() or "—"
+
+                email = getattr(client, "email", None) or "—"
+                phone = getattr(client, "phone", None) or "—"
+                # ✅ contact sur 2 lignes, lisible sans réglages Rich
+                client_contact = f"{email}\n{phone}"
+
+            support_name = "—"
+            if support:
+                sf = getattr(support, "first_name", "") or ""
+                sl = getattr(support, "last_name", "") or ""
+                support_name = f"{sf} {sl}".strip() or "—"
+
+            notes = (getattr(ev, "notes", None) or "").strip() or "—"
+
+            row_map = {
+                "event_id": str(getattr(ev, "id", "—")),
+                "contract_id": str(getattr(ev, "contract_id", "—")),
+                "client_name": client_name,
+                "client_contact": client_contact,
+                "start": _fmt_event_dt(getattr(ev, "start_date", None)),
+                "end": _fmt_event_dt(getattr(ev, "end_date", None)),
+                "support_name": support_name,
+                "location": getattr(ev, "location", None) or "—",
+                "attendees": (
+                    str(getattr(ev, "attendees", "—"))
+                    if getattr(ev, "attendees", None) is not None
+                    else "—"
+                ),
+                "notes": notes,
+                "created_at": _fmt_datetime(getattr(ev, "created_at", None)),
+                "updated_at": _fmt_datetime(getattr(ev, "updated_at", None)),
+            }
+
+            table.add_row(*[row_map[c] for c in columns])
 
         table.caption = f"{len(events)} événement(s)"
         console.print(table)
@@ -131,7 +224,6 @@ def cmd_events_update(args: argparse.Namespace) -> None:
         start_dt = None
         end_dt = None
 
-        # Cohérence des paramètres date/heure
         if (args.start_date is None) ^ (args.start_time is None):
             error("Pour modifier le début, fournissez --start-date ET --start-time.")
             return

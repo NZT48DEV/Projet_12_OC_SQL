@@ -46,14 +46,17 @@
 │   │   ├── contract_repository.py
 │   │   ├── employee_repository.py
 │   │   └── event_repository.py
-│   └── services/                  # Logique métier
+│   ├── services/                  # Logique métier
+│   │   ├── __init__.py
+│   │   ├── auth_service.py
+│   │   ├── client_service.py
+│   │   ├── contract_service.py
+│   │   ├── current_employee.py
+│   │   ├── employee_service.py
+│   │   └── event_service.py
+│   └── utils/
 │       ├── __init__.py
-│       ├── auth_service.py
-│       ├── client_service.py
-│       ├── contract_service.py
-│       ├── current_employee.py
-│       ├── employee_service.py
-│       └── event_service.py
+│       └── phone.py
 ├── docs/
 │   ├── architecture.md            # Structure du projet + responsabilités
 │   ├── authentication.md          # JWT, rôles, tokens, bootstrap

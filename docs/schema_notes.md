@@ -11,7 +11,7 @@
 - clients 1 → N contracts : un client peut avoir plusieurs contrats
 - contracts 1 → N events : un contrat peut couvrir plusieurs événements (choix de conception)
 - employees (support) 1 → N events : un support peut gérer plusieurs événements
-  - support_contact_id est nullable : un événement peut ne pas avoir de support assigné
+- support_contact_id est nullable : un événement peut ne pas avoir de support assigné
 
 ## Clés étrangères
 - clients.sales_contact_id → employees.id
