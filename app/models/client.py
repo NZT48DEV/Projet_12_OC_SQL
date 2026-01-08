@@ -3,9 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.employee import Employee
 
 
 class Client(Base):
@@ -26,8 +27,16 @@ class Client(Base):
         nullable=False,
     )
 
+    sales_contact: Mapped["Employee"] = relationship("Employee", lazy="joined")
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
+    )
+
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        default=None,
+        onupdate=lambda: datetime.now(timezone.utc),
     )

@@ -50,8 +50,13 @@ Rôles possibles : `MANAGEMENT`, `SALES`, `SUPPORT`.
 ### Lister les employés
 ```bash
 epicevents employees list
-epicevents employees list --role SALES
+epicevents employees list <ROLE>
 ```
+#### Options disponibles
+| Option | Description |
+|------|-------------|
+| `--role`  | Filtrer les employés par rôle |
+Rôles possibles : `MANAGEMENT`, `SALES`, `SUPPORT`.
 
 ---
 
@@ -92,13 +97,25 @@ epicevents clients list
 
 ### Créer (SALES)
 ```bash
-epicevents clients create <first_name> <last_name> <email>   [--phone <phone>] [--company-name <company>]
+epicevents clients create <first_name> <last_name> <email> [--phone <phone>] [--company-name <company>]
 ```
 
 ### Mettre à jour
 ```bash
 epicevents clients update <client_id> [options]
 ```
+
+#### Options disponibles
+
+| Option | Description |
+|------|-------------|
+| `--first-name` | Modifier le prénom du client |
+| `--last-name` | Modifier le nom du client |
+| `--email` | Modifier l’adresse email |
+| `--phone` | Modifier le numéro de téléphone |
+| `--company-name` | Modifier le nom de l’entreprise |
+
+> ℹ️ Toutes les options sont facultatives, mais au moins **une option doit être fournie**.
 
 ### Réassigner (MANAGEMENT)
 ```bash
@@ -129,6 +146,13 @@ epicevents contracts sign <contract_id>
 epicevents contracts update <contract_id> [options]
 ```
 
+#### Options disponibles
+
+| Option | Description |
+|------|-------------|
+| `--total` | Modifier le montant total du contrat |
+| `--amount-due` | Modifier le montant restant dû |
+
 ### Réassigner
 ```bash
 epicevents contracts reassign <contract_id> <sales_contact_id>
@@ -145,7 +169,7 @@ epicevents events list
 
 ### Créer (SALES, contrat signé requis)
 ```bash
-epicevents events create <client_id> <contract_id>   <start_date> <start_time> <end_date> <end_time>   <location> <attendees> [--notes <notes>]
+epicevents events create <client_id> <contract_id> <start_date> <start_time> <end_date> <end_time> <location> <attendees> [--notes <notes>]
 ```
 
 Formats :
@@ -156,6 +180,21 @@ Formats :
 ```bash
 epicevents events update <event_id> [options]
 ```
+
+#### Options disponibles
+
+| Option | Description |
+|------|-------------|
+| `--start-date` | Modifier la date de début (YYYY-MM-DD) |
+| `--start-time` | Modifier l’heure de début (HH:MM) |
+| `--end-date` | Modifier la date de fin (YYYY-MM-DD) |
+| `--end-time` | Modifier l’heure de fin (HH:MM) |
+| `--location` | Modifier le lieu |
+| `--attendees` | Modifier le nombre de participants |
+| `--notes` | Modifier les notes |
+| `--support-contact-id` | Assigner / modifier le support (id employé SUPPORT) |
+
+> ℹ️ Toutes les options sont facultatives, mais au moins **une option doit être fournie**.
 
 ### Réassigner le support (MANAGEMENT)
 ```bash
