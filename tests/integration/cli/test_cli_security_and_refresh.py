@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from decimal import Decimal
 
@@ -97,7 +98,9 @@ def test_cli_refresh_token_success_updates_tokens(
 
     result = invoke_cli(["refresh-token"])
 
-    assert "✅ Token rafraîchi avec succès." in result.output
+    assert re.search(
+        r"✅ Token rafraîchi avec succès(\s+\(\d+\s+min\))?\.", result.output
+    )
 
     access_after = token_store.load_access_token()
     refresh_after = token_store.load_refresh_token()

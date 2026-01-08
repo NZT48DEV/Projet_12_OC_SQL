@@ -7,6 +7,7 @@ from rich.table import Table
 
 from app.cli.console import console, error, forbidden, info, success
 from app.db.session import get_session
+from app.models.employee import Role
 from app.services.client_service import (
     ClientAlreadyExistsError,
     NotFoundError,
@@ -18,6 +19,7 @@ from app.services.client_service import (
     update_client,
 )
 from app.services.current_employee import NotAuthenticatedError, get_current_employee
+from app.utils.phone import format_phone_fr
 
 
 def cmd_clients_list(_: argparse.Namespace) -> None:
@@ -31,22 +33,47 @@ def cmd_clients_list(_: argparse.Namespace) -> None:
             info("Aucun client trouvé.")
             return
 
-        table = Table(title="Clients")
+        is_management = employee.role == Role.MANAGEMENT
 
-        table.add_column("ID", justify="right", no_wrap=True)
-        table.add_column("Nom")
-        table.add_column("Email")
-        table.add_column("Entreprise")
-        table.add_column("Sales ID", justify="right")
+        table = Table(title="Clients", show_lines=True)
+
+        # Affichage de l'ID uniquement pour MANAGEMENT
+        if is_management:
+            table.add_column("ID", justify="center", no_wrap=True)
+
+        table.add_column("Nom complet", justify="center")
+        table.add_column("Email", justify="center", no_wrap=True)
+        table.add_column("Téléphone", justify="center", no_wrap=True)
+        table.add_column("Entreprise", justify="center")
+        table.add_column("Contact Commercial", justify="center")
+        table.add_column("Créé le", justify="center", no_wrap=True)
+        table.add_column("Modifié le", justify="center", no_wrap=True)
 
         for c in clients:
-            table.add_row(
-                str(c.id),
-                f"{c.first_name} {c.last_name}",
-                c.email,
-                c.company_name or "",
-                str(c.sales_contact_id) if c.sales_contact_id is not None else "",
+            commercial = (
+                f"{c.sales_contact.first_name} {c.sales_contact.last_name}"
+                if getattr(c, "sales_contact", None)
+                else "N/A"
             )
+
+            row: list[str] = []
+
+            if is_management:
+                row.append(str(c.id))
+
+            row.extend(
+                [
+                    f"{c.first_name} {c.last_name}",
+                    c.email,
+                    format_phone_fr(c.phone) or "N/A",
+                    c.company_name or "N/A",
+                    commercial,
+                    c.created_at.strftime("%Y-%m-%d %H:%M"),
+                    c.updated_at.strftime("%Y-%m-%d %H:%M") if c.updated_at else "N/A",
+                ]
+            )
+
+            table.add_row(*row)
 
         table.caption = f"{len(clients)} client(s)"
         console.print(table)

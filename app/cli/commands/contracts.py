@@ -21,6 +21,7 @@ from app.services.contract_service import (
     update_contract,
 )
 from app.services.current_employee import NotAuthenticatedError, get_current_employee
+from app.utils.phone import format_phone_fr
 
 
 def cmd_contracts_list(_: argparse.Namespace) -> None:
@@ -34,24 +35,65 @@ def cmd_contracts_list(_: argparse.Namespace) -> None:
             info("Aucun contrat trouvé.")
             return
 
-        table = Table(title="Contrats")
+        is_management = employee.role == Role.MANAGEMENT
 
-        table.add_column("ID", justify="right", no_wrap=True)
-        table.add_column("Client ID", justify="right")
-        table.add_column("Sales ID", justify="right")
-        table.add_column("Total", justify="right")
-        table.add_column("À payer", justify="right")
-        table.add_column("Signé", justify="center")
+        table = Table(title="Contrats", show_lines=True)
+
+        if is_management:
+            table.add_column("ID", justify="right", no_wrap=True)
+
+        table.add_column("Client", justify="center", no_wrap=True)
+        table.add_column("Email", justify="center", no_wrap=True)
+        table.add_column("Téléphone", justify="center", no_wrap=True)
+        table.add_column("Entreprise", justify="center", no_wrap=True)
+        table.add_column("Commercial", justify="center", no_wrap=True)
+        table.add_column("Restant à payer", justify="center", no_wrap=True)
+        table.add_column("Total", justify="center", no_wrap=True)
+        table.add_column("Signé", justify="center", no_wrap=True)
+        table.add_column("Créé le", justify="center")
+        table.add_column("Modifié le", justify="center")
 
         for ct in contracts:
-            table.add_row(
-                str(ct.id),
-                str(ct.client_id),
-                str(ct.sales_contact_id) if ct.sales_contact_id is not None else "",
-                str(ct.total_amount),
-                str(ct.amount_due),
-                "✅" if ct.is_signed else "❌",
+            client = getattr(ct, "client", None)
+            sales = getattr(ct, "sales_contact", None)
+
+            client_name = f"{client.first_name} {client.last_name}" if client else "N/A"
+            client_email = client.email if client and client.email else "N/A"
+            client_phone = (format_phone_fr(client.phone) or "N/A") if client else "N/A"
+            client_company = (client.company_name or "N/A") if client else "N/A"
+            client_created = (
+                client.created_at.strftime("%Y-%m-%d %H:%M")
+                if client and client.created_at
+                else "N/A"
             )
+            client_updated = (
+                client.updated_at.strftime("%Y-%m-%d %H:%M")
+                if client and getattr(client, "updated_at", None)
+                else "N/A"
+            )
+
+            sales_name = f"{sales.first_name} {sales.last_name}" if sales else "N/A"
+
+            row: list[str] = []
+            if is_management:
+                row.append(str(ct.id))
+
+            row.extend(
+                [
+                    client_name,
+                    client_email,
+                    client_phone,
+                    client_company,
+                    sales_name,
+                    str(ct.amount_due),
+                    str(ct.total_amount),
+                    "✅" if ct.is_signed else "❌",
+                    client_created,
+                    client_updated,
+                ]
+            )
+
+            table.add_row(*row)
 
         table.caption = f"{len(contracts)} contrat(s)"
         console.print(table)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import click
+from dotenv import find_dotenv, load_dotenv
 
 from app.cli.click_utils import Args
 from app.cli.commands.auth import cmd_login, cmd_logout, cmd_refresh_token, cmd_whoami
@@ -33,6 +34,8 @@ from app.cli.commands.events import (
 from app.core.observability import init_sentry
 from app.db.init_db import init_db
 from app.models.employee import Role
+
+load_dotenv(find_dotenv(), override=True)
 
 
 @click.group(help="Epic Events CRM - CLI")
@@ -265,8 +268,15 @@ def events() -> None:
 
 
 @events.command("list")
-def events_list() -> None:
-    cmd_events_list(Args())
+@click.option(
+    "--view",
+    type=click.Choice(["compact", "contact", "full"], case_sensitive=False),
+    default="compact",
+    show_default=True,
+    help="Choix de l'affichage (colonnes).",
+)
+def events_list(view: str) -> None:
+    cmd_events_list(Args(view=view))
 
 
 @events.command("create")
