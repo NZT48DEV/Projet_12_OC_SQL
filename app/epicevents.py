@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import click
+from dotenv import find_dotenv, load_dotenv
 
 from app.cli.click_utils import Args
 from app.cli.commands.auth import cmd_login, cmd_logout, cmd_refresh_token, cmd_whoami
@@ -33,6 +34,8 @@ from app.cli.commands.events import (
 from app.core.observability import init_sentry
 from app.db.init_db import init_db
 from app.models.employee import Role
+
+load_dotenv(find_dotenv(), override=True)
 
 
 @click.group(help="Epic Events CRM - CLI")
