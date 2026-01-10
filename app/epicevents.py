@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import logging
-
 import click
 from dotenv import find_dotenv, load_dotenv
 
@@ -37,8 +35,8 @@ from app.core.observability import init_sentry
 from app.db.init_db import init_db
 from app.models.employee import Role
 
-load_dotenv(find_dotenv(), override=True)
-logging.basicConfig(level=logging.DEBUG)
+dotenv_path = find_dotenv(usecwd=True)
+loaded = load_dotenv(dotenv_path, override=True)
 
 
 @click.group(help="Epic Events CRM - CLI")
