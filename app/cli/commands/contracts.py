@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from decimal import Decimal
 
 import sentry_sdk
@@ -24,76 +25,131 @@ from app.services.current_employee import NotAuthenticatedError, get_current_emp
 from app.utils.phone import format_phone_fr
 
 
-def cmd_contracts_list(_: argparse.Namespace) -> None:
+def _fmt_dt(dt: datetime | None) -> str:
+    return dt.strftime("%d/%m/%y %H:%M") if dt else "N/A"
+
+
+_COLUMNS = {
+    "contract_id": "ID Contrat",
+    "client_name": "Client",
+    "client_email": "Email",
+    "client_phone": "Téléphone",
+    "company": "Entreprise",
+    "sales_name": "Commercial",
+    "amount_due": "Restant à payer",
+    "total": "Total",
+    "signed": "Signé",
+    "created_at": "Créé le",
+    "updated_at": "Modifié le",
+}
+
+_VIEWS = {
+    # ID Contract, Client, Entreprise, Commercial, Restant, Total, Signé
+    "compact": [
+        "contract_id",
+        "client_name",
+        "company",
+        "sales_name",
+        "amount_due",
+        "total",
+        "signed",
+    ],
+    # ID Contract, Client, Email, Téléphone, Entreprise, Signé, Créé le, Modifié le
+    "contact": [
+        "contract_id",
+        "client_name",
+        "client_email",
+        "client_phone",
+        "company",
+        "signed",
+        "created_at",
+        "updated_at",
+    ],
+    # tout
+    "full": [
+        "contract_id",
+        "client_name",
+        "client_email",
+        "client_phone",
+        "company",
+        "sales_name",
+        "amount_due",
+        "total",
+        "signed",
+        "created_at",
+        "updated_at",
+    ],
+}
+
+
+def cmd_contracts_list(args: argparse.Namespace) -> None:
     """Liste les contrats accessibles à l'utilisateur courant."""
     session = get_session()
     try:
         employee = get_current_employee(session)
-        contracts = list_contracts(session=session, current_employee=employee)
+        contracts = list_contracts(
+            session=session,
+            current_employee=employee,
+            unsigned=getattr(args, "unsigned", False),
+            unpaid=getattr(args, "unpaid", False),
+        )
 
         if not contracts:
             info("Aucun contrat trouvé.")
             return
 
-        is_management = employee.role == Role.MANAGEMENT
+        view = (getattr(args, "view", None) or "compact").lower()
+        columns = _VIEWS.get(view, _VIEWS["compact"])
 
-        table = Table(title="Contrats", show_lines=True)
+        table = Table(title=f"Contrats ({view})")
 
-        if is_management:
-            table.add_column("ID", justify="right", no_wrap=True)
-
-        table.add_column("Client", justify="center", no_wrap=True)
-        table.add_column("Email", justify="center", no_wrap=True)
-        table.add_column("Téléphone", justify="center", no_wrap=True)
-        table.add_column("Entreprise", justify="center", no_wrap=True)
-        table.add_column("Commercial", justify="center", no_wrap=True)
-        table.add_column("Restant à payer", justify="center", no_wrap=True)
-        table.add_column("Total", justify="center", no_wrap=True)
-        table.add_column("Signé", justify="center", no_wrap=True)
-        table.add_column("Créé le", justify="center")
-        table.add_column("Modifié le", justify="center")
+        for col in columns:
+            label = _COLUMNS[col]
+            if col in {"contract_id"}:
+                table.add_column(label, justify="right", no_wrap=True)
+            else:
+                table.add_column(label)
 
         for ct in contracts:
             client = getattr(ct, "client", None)
             sales = getattr(ct, "sales_contact", None)
 
-            client_name = f"{client.first_name} {client.last_name}" if client else "N/A"
-            client_email = client.email if client and client.email else "N/A"
-            client_phone = (format_phone_fr(client.phone) or "N/A") if client else "N/A"
-            client_company = (client.company_name or "N/A") if client else "N/A"
-            client_created = (
-                client.created_at.strftime("%Y-%m-%d %H:%M")
-                if client and client.created_at
-                else "N/A"
-            )
-            client_updated = (
-                client.updated_at.strftime("%Y-%m-%d %H:%M")
-                if client and getattr(client, "updated_at", None)
-                else "N/A"
-            )
+            client_name = "N/A"
+            client_email = "N/A"
+            client_phone = "N/A"
+            company = "N/A"
 
-            sales_name = f"{sales.first_name} {sales.last_name}" if sales else "N/A"
+            if client:
+                first = getattr(client, "first_name", "") or ""
+                last = getattr(client, "last_name", "") or ""
+                client_name = f"{first} {last}".strip() or "N/A"
+                client_email = getattr(client, "email", None) or "N/A"
+                client_phone = (
+                    format_phone_fr(getattr(client, "phone", None) or "") or "N/A"
+                )
+                company = getattr(client, "company_name", None) or "N/A"
 
-            row: list[str] = []
-            if is_management:
-                row.append(str(ct.id))
+            sales_name = "N/A"
+            if sales:
+                sf = getattr(sales, "first_name", "") or ""
+                sl = getattr(sales, "last_name", "") or ""
+                sales_name = f"{sf} {sl}".strip() or "N/A"
 
-            row.extend(
-                [
-                    client_name,
-                    client_email,
-                    client_phone,
-                    client_company,
-                    sales_name,
-                    str(ct.amount_due),
-                    str(ct.total_amount),
-                    "✅" if ct.is_signed else "❌",
-                    client_created,
-                    client_updated,
-                ]
-            )
+            row_map = {
+                "contract_id": str(getattr(ct, "id", "N/A")),
+                "client_name": client_name,
+                "client_email": client_email,
+                "client_phone": client_phone,
+                "company": company,
+                "sales_name": sales_name,
+                "amount_due": str(getattr(ct, "amount_due", "N/A")),
+                "total": str(getattr(ct, "total_amount", "N/A")),
+                "signed": "✅" if getattr(ct, "is_signed", False) else "❌",
+                "created_at": _fmt_dt(getattr(ct, "created_at", None)),
+                "updated_at": _fmt_dt(getattr(ct, "updated_at", None)),
+            }
 
-            table.add_row(*row)
+            table.add_row(*[row_map[c] for c in columns])
 
         table.caption = f"{len(contracts)} contrat(s)"
         console.print(table)

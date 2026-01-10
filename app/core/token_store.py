@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Optional
@@ -11,6 +12,8 @@ except Exception:  # pragma: no cover
     keyring = None
 
 
+logger = logging.getLogger(__name__)
+
 # Nom "service" dans le coffre OS (Keychain / Credential Manager / Secret Service)
 _KEYRING_SERVICE = "epiccrm-cli"
 _KEYRING_ACCESS = "access_token"
@@ -18,34 +21,23 @@ _KEYRING_REFRESH = "refresh_token"
 
 
 def _token_folder() -> Path:
-    """
-    Dossier local pour fallback fichier.
-    Stockage : ~/.epiccrm/
-    """
+    """Dossier local pour fallback fichier (~/.epiccrm/)."""
     folder = Path.home() / ".epiccrm"
     folder.mkdir(parents=True, exist_ok=True)
     return folder
 
 
 def _token_path() -> Path:
-    """
-    Chemin du fichier local contenant les tokens (fallback).
-    Stockage : ~/.epiccrm/tokens.json
-    """
+    """Chemin du fichier local contenant les tokens (~/.epiccrm/tokens.json)."""
     return _token_folder() / "tokens.json"
 
 
 def _best_effort_secure_file(path: Path) -> None:
-    """
-    Tente de restreindre les permissions du fichier (best effort).
-    - Unix: chmod 600
-    - Windows: chmod n'applique pas les ACL NTFS; on fait au mieux sans dépendances.
-    """
+    """Tente de restreindre les permissions du fichier (best effort)."""
     try:
         os.chmod(path, 0o600)
     except Exception:
-        # Sur certains environnements (Windows / FS particuliers), chmod peut échouer.
-        pass
+        logger.debug("Impossible d'appliquer chmod 600 sur %s", path)
 
 
 def _keyring_available() -> bool:
@@ -62,11 +54,10 @@ def _keyring_get(name: str) -> Optional[str]:
 
 
 def _keyring_delete(name: str) -> None:
-    # keyring peut lever si l'entrée n'existe pas selon les backends
     try:
         keyring.delete_password(_KEYRING_SERVICE, name)
     except Exception:
-        pass
+        logger.debug("Suppression keyring ignorée pour %s", name)
 
 
 def save_tokens(access_token: str, refresh_token: str) -> None:
@@ -74,15 +65,18 @@ def save_tokens(access_token: str, refresh_token: str) -> None:
     Sauvegarde les tokens.
     Stratégie:
     1) Coffre sécurisé OS via keyring (si dispo)
-    2) Fallback fichier local (tokens.json) avec permissions restreintes (best effort)
+    2) Fallback fichier local
     """
     if _keyring_available():
         try:
             _keyring_set(access_token, refresh_token)
+            logger.info("Tokens sauvegardés via keyring (backend OS)")
             return
-        except Exception:
-            # Backend keyring absent/mal configuré -> fallback fichier
-            pass
+        except Exception as exc:
+            logger.warning(
+                "Keyring disponible mais échec d'écriture (%s) → fallback fichier",
+                exc,
+            )
 
     path = _token_path()
     path.write_text(
@@ -90,6 +84,7 @@ def save_tokens(access_token: str, refresh_token: str) -> None:
         encoding="utf-8",
     )
     _best_effort_secure_file(path)
+    logger.info("Tokens sauvegardés via fichier local (%s)", path)
 
 
 def load_access_token() -> Optional[str]:
@@ -98,14 +93,18 @@ def load_access_token() -> Optional[str]:
         try:
             token = _keyring_get(_KEYRING_ACCESS)
             if token:
+                logger.debug("Access token chargé depuis keyring")
                 return token
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Erreur lecture access token depuis keyring (%s)", exc)
 
     path = _token_path()
     if not path.exists():
+        logger.debug("Aucun access token trouvé (ni keyring, ni fichier)")
         return None
+
     data = json.loads(path.read_text(encoding="utf-8"))
+    logger.debug("Access token chargé depuis fichier (%s)", path)
     return data.get("access_token")
 
 
@@ -115,14 +114,18 @@ def load_refresh_token() -> Optional[str]:
         try:
             token = _keyring_get(_KEYRING_REFRESH)
             if token:
+                logger.debug("Refresh token chargé depuis keyring")
                 return token
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Erreur lecture refresh token depuis keyring (%s)", exc)
 
     path = _token_path()
     if not path.exists():
+        logger.debug("Aucun refresh token trouvé (ni keyring, ni fichier)")
         return None
+
     data = json.loads(path.read_text(encoding="utf-8"))
+    logger.debug("Refresh token chargé depuis fichier (%s)", path)
     return data.get("refresh_token")
 
 
@@ -136,9 +139,11 @@ def clear_tokens() -> None:
         try:
             _keyring_delete(_KEYRING_ACCESS)
             _keyring_delete(_KEYRING_REFRESH)
-        except Exception:
-            pass
+            logger.info("Tokens supprimés du keyring")
+        except Exception as exc:
+            logger.warning("Erreur suppression keyring (%s)", exc)
 
     path = _token_path()
     if path.exists():
         path.unlink()
+        logger.info("Fichier de tokens supprimé (%s)", path)

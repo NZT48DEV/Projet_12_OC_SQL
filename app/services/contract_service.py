@@ -23,9 +23,16 @@ class NotFoundError(Exception):
     """Entité introuvable."""
 
 
-def list_contracts(session: Session, current_employee: Employee):
+def list_contracts(
+    session: Session,
+    current_employee: Employee,
+    *,
+    unsigned: bool = False,
+    unpaid: bool = False,
+) -> list[Contract]:
+    """Liste les contrats, avec filtres optionnels."""
     repo = ContractRepository(session)
-    return repo.list_all()
+    return repo.list_filtered(unsigned=unsigned, unpaid=unpaid)
 
 
 def create_contract(

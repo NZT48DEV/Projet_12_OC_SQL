@@ -24,12 +24,31 @@ class NotFoundError(Exception):
     """Entité introuvable."""
 
 
-def list_events(session: Session, current_employee: Employee) -> list[Event]:
+def list_events(
+    session: Session,
+    current_employee: Employee,
+    *,
+    without_support: bool = False,
+    assigned_to_me: bool = False,
+) -> list[Event]:
     """
-    Liste tous les événements.
-    Authentification requise (gérée côté CLI).
+    Liste les événements accessibles à l'utilisateur courant.
+
+    :param without_support: si True, retourne uniquement les événements sans support assigné.
+    :param assigned_to_me: si True, retourne uniquement les événements assignés à l'utilisateur courant.
     """
     repo = EventRepository(session)
+
+    # Combinaison impossible (un event ne peut pas être "sans support" ET "assigné à moi")
+    if without_support and assigned_to_me:
+        return []
+
+    if assigned_to_me:
+        return repo.list_assigned_to(current_employee.id)
+
+    if without_support:
+        return repo.list_without_support()
+
     return repo.list_all()
 
 
@@ -138,6 +157,26 @@ def reassign_event(
         raise ValidationError("Impossible d'assigner un employé désactivé.")
 
     event.support_contact_id = support_contact_id
+    session.commit()
+    return event
+
+
+def unassign_event_support(
+    session: Session,
+    current_employee: Employee,
+    *,
+    event_id: int,
+) -> Event:
+    """Retire le support assigné à un événement."""
+    if current_employee.role != Role.MANAGEMENT:
+        raise PermissionDeniedError("Seul le management peut retirer un support.")
+
+    repo = EventRepository(session)
+    event = repo.get_by_id(event_id)
+    if event is None:
+        raise NotFoundError("Événement introuvable.")
+
+    event.support_contact_id = None
     session.commit()
     return event
 

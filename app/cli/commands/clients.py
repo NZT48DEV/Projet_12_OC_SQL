@@ -39,7 +39,7 @@ def cmd_clients_list(_: argparse.Namespace) -> None:
 
         # Affichage de l'ID uniquement pour MANAGEMENT
         if is_management:
-            table.add_column("ID", justify="center", no_wrap=True)
+            table.add_column("ID Client", justify="center", no_wrap=True)
 
         table.add_column("Nom complet", justify="center")
         table.add_column("Email", justify="center", no_wrap=True)

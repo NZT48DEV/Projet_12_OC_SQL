@@ -131,6 +131,30 @@ epicevents clients reassign <client_id> <sales_contact_id>
 epicevents contracts list
 ```
 
+#### Choisir l’affichage (colonnes)
+Par défaut, la vue **compact** est utilisée.
+
+```bash
+epicevents contracts list --view compact
+epicevents contracts list --view contact
+epicevents contracts list --view full
+```
+
+#### Filtres
+```bash
+epicevents contracts list --unsigned
+epicevents contracts list --unpaid
+```
+
+**Vues disponibles :**
+| Option | Description |
+|------|-------------|
+| `compact` | ID Contract, Client, Entreprise, Commercial, Restant à payer, Total, Signé |
+| `contact` | ID Contract, Client, Email, Téléphone, Entreprise, Signé, Créé le, Modifié le |
+| `full` | ID Contract, Client, Email, Téléphone, Entreprise, Commercial, Restant à payer, Total, Signé, Créé le, Modifié le |
+| `--unsigned` | Affiche uniquement les contrats non signés |
+| `--unpaid` | Affiche uniquement les contrats non entièrement payés |
+
 ### Créer (MANAGEMENT)
 ```bash
 epicevents contracts create <client_id> <total> <amount_due> [--signed]
@@ -176,11 +200,22 @@ epicevents events list --view contact
 epicevents events list --view full
 ```
 
-**Vues disponibles :**
-- `compact` : Event ID, Contrat ID, Client, Début, Fin, Lieu, Participants
-- `contact` : `compact` + Contact client (email + phone), Support
-- `full` : `contact` + Notes, Créé le, Modifié le
+#### Filtres
+```bash
+epicevents events list --without-support
+epicevents events list --assigned-to-me
+# OU
+epicevents events list --mine
+```
 
+**Vues disponibles :**
+| Option | Description |
+|------|-------------|
+| `compact` | Event ID, Contrat ID, Client, Début, Fin, Support, Lieu, Participants |
+| `contact` | `compact` + Contact client (email + phone), Support |
+| `full` | `contact` + Notes, Créé le, Modifié le |
+| `--without-support` | `compact` + Affiche uniquement les événements sans support assigné. |
+| `--assigned-to-me` / `--mine` | `compact` + Affiche uniquement les événements qui me sont attribués. |
 ---
 
 ### Créer (SALES, contrat signé requis)
