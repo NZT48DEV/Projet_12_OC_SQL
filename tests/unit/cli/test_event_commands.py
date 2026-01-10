@@ -4,20 +4,13 @@ from datetime import datetime
 from types import SimpleNamespace
 
 from app.cli.commands import events as events_cmds
+from tests.unit.cli.helpers.rich_table import (
+    capture_table,
+    get_table,
+    table_headers,
+)
 
 
-# -----------------------------
-# Helpers de test (Rich Table)
-# -----------------------------
-def _get_table_columns(table) -> list[str]:
-    """Retourne les en-têtes de colonnes Rich (texte)."""
-    # Rich 13+: table.columns -> Column objects, .header is str
-    return [c.header for c in table.columns]
-
-
-# -----------------------------
-# events create
-# -----------------------------
 def test_cmd_events_create_bad_datetime_format(monkeypatch, capsys, dummy_session_rb):
     """events create: refuse si format date/heure invalide."""
     monkeypatch.setattr(events_cmds, "get_session", lambda: dummy_session_rb)
@@ -44,9 +37,6 @@ def test_cmd_events_create_bad_datetime_format(monkeypatch, capsys, dummy_sessio
     assert dummy_session_rb.closed is True
 
 
-# -----------------------------
-# events update
-# -----------------------------
 def test_cmd_events_update_requires_both_start_fields(
     monkeypatch, capsys, dummy_session_rb
 ):
@@ -59,7 +49,7 @@ def test_cmd_events_update_requires_both_start_fields(
     args = SimpleNamespace(
         event_id=1,
         start_date="2025-12-30",
-        start_time=None,  # incohérent
+        start_time=None,
         end_date=None,
         end_time=None,
         location=None,
@@ -114,9 +104,6 @@ def test_cmd_events_update_success(monkeypatch, capsys, dummy_session_rb):
     assert dummy_session_rb.closed is True
 
 
-# -----------------------------
-# events list (nouveau: --view)
-# -----------------------------
 def test_cmd_events_list_default_view_compact(monkeypatch, dummy_session_rb):
     """events list: par défaut view=compact -> colonnes compact."""
     monkeypatch.setattr(events_cmds, "get_session", lambda: dummy_session_rb)
@@ -124,7 +111,6 @@ def test_cmd_events_list_default_view_compact(monkeypatch, dummy_session_rb):
         events_cmds, "get_current_employee", lambda s: SimpleNamespace()
     )
 
-    # 1 event minimal
     ev = SimpleNamespace(
         id=1,
         contract_id=10,
@@ -140,28 +126,19 @@ def test_cmd_events_list_default_view_compact(monkeypatch, dummy_session_rb):
     )
     monkeypatch.setattr(events_cmds, "list_events", lambda **k: [ev])
 
-    printed = {}
+    printed = capture_table(monkeypatch, events_cmds)
 
-    def fake_print(obj):
-        printed["obj"] = obj
+    events_cmds.cmd_events_list(SimpleNamespace())
+    table = get_table(printed)
 
-    monkeypatch.setattr(events_cmds.console, "print", fake_print)
-
-    # args sans view -> default "compact" dans cmd_events_list
-    args = SimpleNamespace()
-    events_cmds.cmd_events_list(args)
-
-    table = printed.get("obj")
-    assert table is not None
-
-    headers = _get_table_columns(table)
-    # compact: event_id, contract_id, client_name, start, end, location, attendees
+    headers = table_headers(table)
     assert headers == [
-        "Event ID",
+        "ID Event",
         "Contrat ID",
         "Client",
         "Début",
         "Fin",
+        "Support",
         "Lieu",
         "Participants",
     ]
@@ -176,10 +153,7 @@ def test_cmd_events_list_view_contact(monkeypatch, dummy_session_rb):
     )
 
     client = SimpleNamespace(
-        first_name="A",
-        last_name="B",
-        email="a@b.com",
-        phone="0600000000",
+        first_name="A", last_name="B", email="a@b.com", phone="0600000000"
     )
     support = SimpleNamespace(first_name="S", last_name="UP")
 
@@ -198,22 +172,14 @@ def test_cmd_events_list_view_contact(monkeypatch, dummy_session_rb):
     )
     monkeypatch.setattr(events_cmds, "list_events", lambda **k: [ev])
 
-    printed = {}
+    printed = capture_table(monkeypatch, events_cmds)
 
-    def fake_print(obj):
-        printed["obj"] = obj
+    events_cmds.cmd_events_list(SimpleNamespace(view="contact"))
+    table = get_table(printed)
 
-    monkeypatch.setattr(events_cmds.console, "print", fake_print)
-
-    args = SimpleNamespace(view="contact")
-    events_cmds.cmd_events_list(args)
-
-    table = printed.get("obj")
-    assert table is not None
-
-    headers = _get_table_columns(table)
+    headers = table_headers(table)
     assert headers == [
-        "Event ID",
+        "ID Event",
         "Contrat ID",
         "Client",
         "Contact client",
@@ -234,10 +200,7 @@ def test_cmd_events_list_view_full(monkeypatch, dummy_session_rb):
     )
 
     client = SimpleNamespace(
-        first_name="A",
-        last_name="B",
-        email="a@b.com",
-        phone="0600000000",
+        first_name="A", last_name="B", email="a@b.com", phone="0600000000"
     )
     support = SimpleNamespace(first_name="S", last_name="UP")
 
@@ -256,22 +219,14 @@ def test_cmd_events_list_view_full(monkeypatch, dummy_session_rb):
     )
     monkeypatch.setattr(events_cmds, "list_events", lambda **k: [ev])
 
-    printed = {}
+    printed = capture_table(monkeypatch, events_cmds)
 
-    def fake_print(obj):
-        printed["obj"] = obj
+    events_cmds.cmd_events_list(SimpleNamespace(view="full"))
+    table = get_table(printed)
 
-    monkeypatch.setattr(events_cmds.console, "print", fake_print)
-
-    args = SimpleNamespace(view="full")
-    events_cmds.cmd_events_list(args)
-
-    table = printed.get("obj")
-    assert table is not None
-
-    headers = _get_table_columns(table)
+    headers = table_headers(table)
     assert headers == [
-        "Event ID",
+        "ID Event",
         "Contrat ID",
         "Client",
         "Contact client",
@@ -311,27 +266,100 @@ def test_cmd_events_list_unknown_view_falls_back_to_compact(
     )
     monkeypatch.setattr(events_cmds, "list_events", lambda **k: [ev])
 
-    printed = {}
+    printed = capture_table(monkeypatch, events_cmds)
 
-    def fake_print(obj):
-        printed["obj"] = obj
+    events_cmds.cmd_events_list(SimpleNamespace(view="nope"))
+    table = get_table(printed)
 
-    monkeypatch.setattr(events_cmds.console, "print", fake_print)
-
-    args = SimpleNamespace(view="nope")
-    events_cmds.cmd_events_list(args)
-
-    table = printed.get("obj")
-    assert table is not None
-
-    headers = _get_table_columns(table)
+    headers = table_headers(table)
     assert headers == [
-        "Event ID",
+        "ID Event",
         "Contrat ID",
         "Client",
         "Début",
         "Fin",
+        "Support",
         "Lieu",
         "Participants",
     ]
+    assert dummy_session_rb.closed is True
+
+
+def test_cmd_events_reassign_unassign_support(monkeypatch, capsys, dummy_session_rb):
+    """events reassign: --unassign-support retire le support assigné."""
+    monkeypatch.setattr(events_cmds, "get_session", lambda: dummy_session_rb)
+    monkeypatch.setattr(
+        events_cmds, "get_current_employee", lambda s: SimpleNamespace()
+    )
+
+    ev = SimpleNamespace(id=1, support_contact_id=None)
+    called = {}
+
+    def fake_unassign_event_support(**kwargs):
+        called.update(kwargs)
+        return ev
+
+    monkeypatch.setattr(
+        events_cmds, "unassign_event_support", fake_unassign_event_support
+    )
+
+    args = SimpleNamespace(
+        event_id=1,
+        unassign_support=True,
+        support_contact_id=None,
+    )
+
+    events_cmds.cmd_events_reassign(args)
+    out = capsys.readouterr().out
+
+    assert "Support retiré" in out
+    assert "id=1" in out
+    assert called["event_id"] == 1
+    assert "current_employee" in called
+    assert "session" in called
+    assert dummy_session_rb.closed is True
+
+
+def test_cmd_events_list_passes_assigned_to_me_filter(monkeypatch, dummy_session_rb):
+    """events list: transmet assigned_to_me au service list_events()."""
+    monkeypatch.setattr(events_cmds, "get_session", lambda: dummy_session_rb)
+    monkeypatch.setattr(
+        events_cmds, "get_current_employee", lambda s: SimpleNamespace()
+    )
+
+    captured = {}
+
+    def fake_list_events(**kwargs):
+        captured.update(kwargs)
+        # Retourne 1 event minimal pour éviter "Aucun événement"
+        return [
+            SimpleNamespace(
+                id=1,
+                contract_id=10,
+                start_date=datetime(2026, 1, 1, 10, 0),
+                end_date=datetime(2026, 1, 1, 12, 0),
+                location="Paris",
+                attendees=50,
+                notes=None,
+                created_at=datetime(2026, 1, 1, 9, 0),
+                updated_at=datetime(2026, 1, 1, 9, 30),
+                client=None,
+                support_contact=None,
+            )
+        ]
+
+    monkeypatch.setattr(events_cmds, "list_events", fake_list_events)
+
+    printed = capture_table(monkeypatch, events_cmds)
+
+    args = SimpleNamespace(view="compact", assigned_to_me=True, without_support=False)
+    events_cmds.cmd_events_list(args)
+
+    table = get_table(printed)
+    assert table is not None
+
+    assert captured["assigned_to_me"] is True
+    assert captured["without_support"] is False
+    assert "session" in captured
+    assert "current_employee" in captured
     assert dummy_session_rb.closed is True

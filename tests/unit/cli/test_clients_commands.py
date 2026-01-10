@@ -3,10 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-from rich.console import Console
-
 from app.cli.commands import clients as clients_cmds
 from app.models.employee import Role
+from tests.unit.cli.helpers.rich_table import (
+    capture_table,
+    get_table,
+    table_all_text,
+    table_headers,
+)
 
 
 def test_cmd_clients_list_empty(monkeypatch, capsys, dummy_session_rb):
@@ -26,20 +30,13 @@ def test_cmd_clients_list_empty(monkeypatch, capsys, dummy_session_rb):
     assert dummy_session_rb.closed is True
 
 
-def test_cmd_clients_list_prints_for_management(monkeypatch, capsys, dummy_session_rb):
+def test_cmd_clients_list_prints_for_management(monkeypatch, dummy_session_rb):
     """clients list: MANAGEMENT voit l'ID + données formatées."""
     monkeypatch.setattr(clients_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         clients_cmds,
         "get_current_employee",
         lambda s: SimpleNamespace(role=Role.MANAGEMENT),
-    )
-
-    # ✅ Force une console Rich assez large pour éviter la troncature
-    monkeypatch.setattr(
-        clients_cmds,
-        "console",
-        Console(width=200, force_terminal=True, color_system=None),
     )
 
     created_at = datetime(2026, 1, 8, 11, 12, tzinfo=timezone.utc)
@@ -58,24 +55,26 @@ def test_cmd_clients_list_prints_for_management(monkeypatch, capsys, dummy_sessi
 
     monkeypatch.setattr(clients_cmds, "list_clients", lambda **k: [c])
 
-    clients_cmds.cmd_clients_list(SimpleNamespace())
-    out = capsys.readouterr().out
+    printed = capture_table(monkeypatch, clients_cmds)
 
-    assert "Clients" in out
-    assert "John" in out
-    assert "Doe" in out
-    assert "j@test.com" in out
-    assert "ACME" in out
-    assert "Jane" in out
-    assert "Sales" in out
-    assert "2026-01-08" in out
-    assert "N/A" in out
+    clients_cmds.cmd_clients_list(SimpleNamespace())
+    table = get_table(printed)
+
+    headers = table_headers(table)
+    assert any("ID" in h for h in headers)
+
+    text = table_all_text(table)
+    assert "John" in text
+    assert "Doe" in text
+    assert "j@test.com" in text
+    assert "ACME" in text
+    assert "Jane" in text
+    assert "Sales" in text
+    assert "+33 6 12 34 56 78" in text
     assert dummy_session_rb.closed is True
 
 
-def test_cmd_clients_list_prints_for_sales_hides_id(
-    monkeypatch, capsys, dummy_session_rb
-):
+def test_cmd_clients_list_prints_for_sales_hides_id(monkeypatch, dummy_session_rb):
     """clients list: SALES ne voit pas la colonne ID."""
     monkeypatch.setattr(clients_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
@@ -91,28 +90,28 @@ def test_cmd_clients_list_prints_for_sales_hides_id(
         first_name="John",
         last_name="Doe",
         email="j@test.com",
-        phone=None,  # doit afficher N/A
-        company_name=None,  # doit afficher N/A
-        sales_contact=None,  # doit afficher N/A
+        phone=None,
+        company_name=None,
+        sales_contact=None,
         created_at=created_at,
         updated_at=None,
     )
 
     monkeypatch.setattr(clients_cmds, "list_clients", lambda **k: [c])
 
+    printed = capture_table(monkeypatch, clients_cmds)
+
     clients_cmds.cmd_clients_list(SimpleNamespace())
-    out = capsys.readouterr().out
+    table = get_table(printed)
 
-    assert "Clients" in out
-    assert "John" in out
-    assert "Doe" in out
-    assert "j@test.com" in out
+    headers = table_headers(table)
+    assert all("ID" not in h for h in headers)
 
-    # Pas de colonne ID (non-management)
-    assert "ID" not in out
-
-    # Valeurs manquantes -> N/A
-    assert "N/A" in out
+    text = table_all_text(table)
+    assert "John" in text
+    assert "Doe" in text
+    assert "j@test.com" in text
+    assert "N/A" in text
 
     assert dummy_session_rb.closed is True
 

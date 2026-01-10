@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import click
 from dotenv import find_dotenv, load_dotenv
 
@@ -36,6 +38,7 @@ from app.db.init_db import init_db
 from app.models.employee import Role
 
 load_dotenv(find_dotenv(), override=True)
+logging.basicConfig(level=logging.DEBUG)
 
 
 @click.group(help="Epic Events CRM - CLI")
@@ -215,8 +218,23 @@ def contracts() -> None:
 
 
 @contracts.command("list")
-def contracts_list() -> None:
-    cmd_contracts_list(Args())
+@click.option(
+    "--view",
+    type=click.Choice(["compact", "contact", "full"], case_sensitive=False),
+    default="compact",
+    show_default=True,
+    help="Choix de l'affichage (colonnes).",
+)
+@click.option(
+    "--unsigned", is_flag=True, help="Afficher uniquement les contrats non signés."
+)
+@click.option(
+    "--unpaid",
+    is_flag=True,
+    help="Afficher uniquement les contrats non entièrement payés.",
+)
+def contracts_list(view: str, unsigned: bool, unpaid: bool) -> None:
+    cmd_contracts_list(Args(view=view, unsigned=unsigned, unpaid=unpaid))
 
 
 @contracts.command("create")
@@ -275,8 +293,22 @@ def events() -> None:
     show_default=True,
     help="Choix de l'affichage (colonnes).",
 )
-def events_list(view: str) -> None:
-    cmd_events_list(Args(view=view))
+@click.option(
+    "--without-support",
+    is_flag=True,
+    help="Afficher uniquement les événements sans support assigné.",
+)
+@click.option(
+    "--assigned-to-me",
+    "--mine",
+    "assigned_to_me",
+    is_flag=True,
+    help="Afficher uniquement les événements qui me sont assignés.",
+)
+def events_list(view: str, without_support: bool, assigned_to_me: bool) -> None:
+    cmd_events_list(
+        Args(view=view, without_support=without_support, assigned_to_me=assigned_to_me)
+    )
 
 
 @events.command("create")
@@ -353,9 +385,22 @@ def events_update(
 
 @events.command("reassign")
 @click.argument("event_id", type=int)
-@click.option("--support-contact-id", "support_contact_id", type=int, required=True)
-def events_reassign(event_id: int, support_contact_id: int) -> None:
-    cmd_events_reassign(Args(event_id=event_id, support_contact_id=support_contact_id))
+@click.option("--support-contact-id", "support_contact_id", type=int, required=False)
+@click.option(
+    "--unassign-support",
+    is_flag=True,
+    help="Retire le support assigné (support_contact_id = NULL).",
+)
+def events_reassign(
+    event_id: int, support_contact_id: int | None, unassign_support: bool
+) -> None:
+    cmd_events_reassign(
+        Args(
+            event_id=event_id,
+            support_contact_id=support_contact_id,
+            unassign_support=unassign_support,
+        )
+    )
 
 
 def main() -> None:

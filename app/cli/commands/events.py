@@ -16,21 +16,22 @@ from app.services.event_service import (
     create_event,
     list_events,
     reassign_event,
+    unassign_event_support,
     update_event,
 )
 
 
 def _fmt_datetime(dt: datetime | None) -> str:
-    return dt.strftime("%d/%m/%y %H:%M") if dt else "—"
+    return dt.strftime("%d/%m/%y %H:%M") if dt else "N/A"
 
 
 def _fmt_event_dt(dt: datetime | None) -> str:
-    return dt.strftime("%d/%m/%y %H:%M") if dt else "—"
+    return dt.strftime("%d/%m/%y %H:%M") if dt else "N/A"
 
 
 # Colonnes disponibles (clé -> label)
 _COLUMNS = {
-    "event_id": "Event ID",
+    "event_id": "ID Event",
     "contract_id": "Contrat ID",
     "client_name": "Client",
     "client_contact": "Contact client",
@@ -52,6 +53,7 @@ _VIEWS = {
         "client_name",
         "start",
         "end",
+        "support_name",
         "location",
         "attendees",
     ],
@@ -88,7 +90,12 @@ def cmd_events_list(args: argparse.Namespace) -> None:
     session = get_session()
     try:
         employee = get_current_employee(session)
-        events = list_events(session=session, current_employee=employee)
+        events = list_events(
+            session=session,
+            current_employee=employee,
+            without_support=getattr(args, "without_support", False),
+            assigned_to_me=getattr(args, "assigned_to_me", False),
+        )
 
         if not events:
             info("Aucun événement trouvé.")
@@ -111,39 +118,39 @@ def cmd_events_list(args: argparse.Namespace) -> None:
             client = getattr(ev, "client", None)
             support = getattr(ev, "support_contact", None)
 
-            client_name = "—"
-            client_contact = "—"
+            client_name = "N/A"
+            client_contact = "N/A"
             if client:
                 first = getattr(client, "first_name", "") or ""
                 last = getattr(client, "last_name", "") or ""
-                client_name = f"{first} {last}".strip() or "—"
+                client_name = f"{first} {last}".strip() or "N/A"
 
-                email = getattr(client, "email", None) or "—"
-                phone = getattr(client, "phone", None) or "—"
+                email = getattr(client, "email", None) or "N/A"
+                phone = getattr(client, "phone", None) or "N/A"
                 # ✅ contact sur 2 lignes, lisible sans réglages Rich
                 client_contact = f"{email}\n{phone}"
 
-            support_name = "—"
+            support_name = "N/A"
             if support:
                 sf = getattr(support, "first_name", "") or ""
                 sl = getattr(support, "last_name", "") or ""
-                support_name = f"{sf} {sl}".strip() or "—"
+                support_name = f"{sf} {sl}".strip() or "N/A"
 
-            notes = (getattr(ev, "notes", None) or "").strip() or "—"
+            notes = (getattr(ev, "notes", None) or "").strip() or "N/A"
 
             row_map = {
-                "event_id": str(getattr(ev, "id", "—")),
-                "contract_id": str(getattr(ev, "contract_id", "—")),
+                "event_id": str(getattr(ev, "id", "N/A")),
+                "contract_id": str(getattr(ev, "contract_id", "N/A")),
                 "client_name": client_name,
                 "client_contact": client_contact,
                 "start": _fmt_event_dt(getattr(ev, "start_date", None)),
                 "end": _fmt_event_dt(getattr(ev, "end_date", None)),
                 "support_name": support_name,
-                "location": getattr(ev, "location", None) or "—",
+                "location": getattr(ev, "location", None) or "N/A",
                 "attendees": (
-                    str(getattr(ev, "attendees", "—"))
+                    str(getattr(ev, "attendees", "N/A"))
                     if getattr(ev, "attendees", None) is not None
-                    else "—"
+                    else "N/A"
                 ),
                 "notes": notes,
                 "created_at": _fmt_datetime(getattr(ev, "created_at", None)),
@@ -283,10 +290,19 @@ def cmd_events_update(args: argparse.Namespace) -> None:
 
 
 def cmd_events_reassign(args: argparse.Namespace) -> None:
-    """Réassigne un événement à un support."""
+    """Réassigne le support d'un événement."""
     session = get_session()
     try:
         employee = get_current_employee(session)
+
+        if getattr(args, "unassign_support", False):
+            event = unassign_event_support(
+                session=session,
+                current_employee=employee,
+                event_id=args.event_id,
+            )
+            success(f"Support retiré : id={event.id}")
+            return
 
         event = reassign_event(
             session=session,
@@ -294,10 +310,8 @@ def cmd_events_reassign(args: argparse.Namespace) -> None:
             event_id=args.event_id,
             support_contact_id=args.support_contact_id,
         )
-
         success(
-            "Événement réassigné : "
-            f"id={event.id} | support_contact_id={event.support_contact_id}"
+            f"Événement réassigné : id={event.id} | support_contact_id={event.support_contact_id}"
         )
 
     except NotAuthenticatedError as exc:
