@@ -66,10 +66,13 @@ jobs:
         run: pipenv install --dev
 
       - name: Check required environment variables
+        shell: bash
         run: |
-          test -n "$DATABASE_URL" || exit 1
-          test -n "$DATABASE_URL_TEST" || exit 1
-          test -n "$EPICCRM_JWT_SECRET" || exit 1
+          set -euo pipefail
+          test -n "${DATABASE_URL}" || (echo "DATABASE_URL is missing" && exit 1)
+          test -n "${DATABASE_URL_TEST}" || (echo "DATABASE_URL_TEST is missing" && exit 1)
+          test -n "${EPICCRM_JWT_SECRET}" || (echo "EPICCRM_JWT_SECRET is missing" && exit 1)
+          echo "Required environment variables OK."
 
       - name: Apply migrations
         run: pipenv run alembic upgrade head
