@@ -70,6 +70,31 @@ EPICCRM_JWT_ROTATE_REFRESH=true
 
 ---
 
+## Génération des secrets (recommandé)
+
+Les secrets doivent être **générés localement**, jamais partagés, ni commités.
+
+Une seule méthode est utilisée pour tout générer (Python ≥ 3.9) :
+
+```bash
+python - << 'EOF'
+import secrets
+
+db_password = secrets.token_urlsafe(32)
+jwt_secret = secrets.token_urlsafe(48)
+
+print("DB_PASSWORD=", db_password)
+print("EPICCRM_JWT_SECRET=", jwt_secret)
+EOF
+```
+
+- `DB_PASSWORD` : mot de passe PostgreSQL fort et URL-safe
+- `EPICCRM_JWT_SECRET` : clé JWT robuste (≥ 256 bits)
+
+Colle ensuite les valeurs dans ton fichier `.env`.
+
+---
+
 ## Base de données et migrations
 
 Le schéma de la base de données est géré via **SQLAlchemy** et **Alembic**.

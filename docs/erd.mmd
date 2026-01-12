@@ -1,8 +1,10 @@
 erDiagram
     EMPLOYEES ||--o{ CLIENTS : "sales_contact"
+    EMPLOYEES ||--o{ CONTRACTS : "sales_contact"
+    EMPLOYEES ||--o{ EVENTS : "support_contact (nullable)"
     CLIENTS   ||--o{ CONTRACTS : "has"
+    CLIENTS   ||--o{ EVENTS : "has"
     CONTRACTS ||--o{ EVENTS : "covers"
-    EMPLOYEES ||--o{ EVENTS : "support_contact"
 
     EMPLOYEES {
       int id PK
@@ -12,16 +14,21 @@ erDiagram
       string role "MANAGEMENT|SALES|SUPPORT"
       string password_hash
       datetime created_at
+      boolean is_active
+      datetime deactivated_at "nullable"
+      datetime reactivated_at "nullable"
     }
 
     CLIENTS {
       int id PK
-      string full_name
+      string first_name
+      string last_name
       string email "UNIQUE"
-      string phone
-      string company_name
+      string phone "nullable"
+      string company_name "nullable"
       int sales_contact_id FK
       datetime created_at
+      datetime updated_at "nullable"
     }
 
     CONTRACTS {
@@ -32,6 +39,7 @@ erDiagram
       decimal amount_due
       boolean is_signed
       datetime created_at
+      datetime updated_at "nullable"
     }
 
     EVENTS {
@@ -43,6 +51,7 @@ erDiagram
       datetime end_date
       string location
       int attendees
-      string notes
+      string notes "nullable"
       datetime created_at
+      datetime updated_at "nullable"
     }
