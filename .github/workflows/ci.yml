@@ -34,14 +34,19 @@ jobs:
       DATABASE_URL: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
       DATABASE_URL_TEST: postgresql+psycopg://epic_crm_app:epic_crm_password@localhost:5432/epic_crm_test
 
-      EPICCRM_JWT_SECRET: ${{ secrets.EPICCRM_JWT_SECRET }}
+      # JWT (fallback en CI/PR bots si le secret n'est pas disponible)
+      EPICCRM_JWT_SECRET: ${{ secrets.EPICCRM_JWT_SECRET || 'ci_dummy_jwt_secret_change_me' }}
       EPICCRM_JWT_ACCESS_MINUTES: ${{ vars.EPICCRM_JWT_ACCESS_MINUTES }}
       EPICCRM_JWT_REFRESH_DAYS: ${{ vars.EPICCRM_JWT_REFRESH_DAYS }}
       EPICCRM_JWT_ALG: ${{ vars.EPICCRM_JWT_ALG }}
       EPICCRM_JWT_ROTATE_REFRESH: ${{ vars.EPICCRM_JWT_ROTATE_REFRESH }}
 
+      # Sentry désactivé en CI
       SENTRY_DSN: ""
       SENTRY_ENVIRONMENT: "ci"
+
+      # Codecov (vide en PR Dependabot si le secret n'est pas fourni)
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
       - name: Checkout
@@ -76,13 +81,11 @@ jobs:
         run: pipenv run pytest -q --cov=app --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
           fail_ci_if_error: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
 
       - name: Create Sentry release
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
