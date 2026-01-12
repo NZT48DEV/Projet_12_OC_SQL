@@ -67,15 +67,32 @@ Le projet nécessite un serveur **PostgreSQL** en fonctionnement.
 
 Avant de lancer l’application, créer un fichier `.env` à la racine du projet.
 
-Exemple minimal :
+Exemple :
 
 ```bash
+# Base de données (développement / production)
 DATABASE_URL=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm
+
+# Base de données de test (utilisée par pytest)
 DATABASE_URL_TEST=postgresql+psycopg://epic_crm_app:VOTRE_MOT_DE_PASSE@localhost:5432/epic_crm_test
-EPICCRM_JWT_SECRET=VOTRE_CLE_SECRETE
+
+# Sentry (monitoring & suivi des erreurs)
+SENTRY_DSN=https://<votre-dsn-sentry>
+SENTRY_ENVIRONMENT=development
+SENTRY_RELEASE=epic-events@1.0.0
+
+# JWT
+EPICCRM_JWT_SECRET=VOTRE_CLE_SECRETE_JWT
+EPICCRM_JWT_ACCESS_MINUTES=20
+EPICCRM_JWT_REFRESH_DAYS=7
+EPICCRM_JWT_ALG=HS256
+EPICCRM_JWT_ROTATE_REFRESH=true
 ```
 
 Les variables détaillées et les bonnes pratiques de sécurité sont décrites dans [`docs/database.md`](docs/database.md).
+
+La configuration complète de la journalisation et du monitoring avec Sentry est documentée dans [`docs/observability.md`](docs/observability.md).
+
 
 ---
 
