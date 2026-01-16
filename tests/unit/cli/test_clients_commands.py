@@ -74,8 +74,8 @@ def test_cmd_clients_list_prints_for_management(monkeypatch, dummy_session_rb):
     assert dummy_session_rb.closed is True
 
 
-def test_cmd_clients_list_prints_for_sales_hides_id(monkeypatch, dummy_session_rb):
-    """clients list: SALES ne voit pas la colonne ID."""
+def test_cmd_clients_list_prints_for_sales_shows_id(monkeypatch, dummy_session_rb):
+    """clients list: MANAGEMENT & SALES voit la colonne ID."""
     monkeypatch.setattr(clients_cmds, "get_session", lambda: dummy_session_rb)
     monkeypatch.setattr(
         clients_cmds,
@@ -105,9 +105,10 @@ def test_cmd_clients_list_prints_for_sales_hides_id(monkeypatch, dummy_session_r
     table = get_table(printed)
 
     headers = table_headers(table)
-    assert all("ID" not in h for h in headers)
+    assert any("ID" in h for h in headers)
 
     text = table_all_text(table)
+    assert "99" in text
     assert "John" in text
     assert "Doe" in text
     assert "j@test.com" in text

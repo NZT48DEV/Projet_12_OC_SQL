@@ -34,11 +34,12 @@ def cmd_clients_list(_: argparse.Namespace) -> None:
             return
 
         is_management = employee.role == Role.MANAGEMENT
+        is_sales = employee.role == Role.SALES
 
         table = Table(title="Clients", show_lines=True)
 
-        # Affichage de l'ID uniquement pour MANAGEMENT
-        if is_management:
+        # Affichage de l'ID uniquement pour MANAGEMENT/SALES
+        if is_management or is_sales:
             table.add_column("ID Client", justify="center", no_wrap=True)
 
         table.add_column("Nom complet", justify="center")
@@ -58,7 +59,7 @@ def cmd_clients_list(_: argparse.Namespace) -> None:
 
             row: list[str] = []
 
-            if is_management:
+            if is_management or is_sales:
                 row.append(str(c.id))
 
             row.extend(
